@@ -5,3 +5,5 @@
 .env.*
 *.log
 *.zip
+HANDOFF.md
+PLAN.md
