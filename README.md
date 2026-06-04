@@ -4,10 +4,10 @@ WordPress plugin with a **Multi Step Form** Gutenberg block — a configurable m
 
 ## Two different plugins on Local
 
-| Plugins screen name | Author | Folder | Use |
-|---------------------|--------|--------|-----|
-| **Multi Step Form** | Mondula GmbH | `multi-step-form` | Third-party — delete or leave inactive |
-| **Custom Multi Step Form** | A.Pēda | `custom-multi-step-form` | **Activate this one** |
+| Plugins screen name        | Author       | Folder                   | Use                                    |
+| -------------------------- | ------------ | ------------------------ | -------------------------------------- |
+| **Multi Step Form**        | Mondula GmbH | `multi-step-form`        | Third-party — delete or leave inactive |
+| **Custom Multi Step Form** | A.Pēda       | `custom-multi-step-form` | **Activate this one**                  |
 
 The block inserter still shows **Multi Step Form** (our block). Only the plugin list name is different so it does not clash with Mondula.
 
