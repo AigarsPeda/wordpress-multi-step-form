@@ -14,8 +14,7 @@ usage() {
 Usage:
   ./scripts/link-custom-multi-step-form-local.sh [link|status]
 
-Our plugin:  custom-multi-step-form  →  "Custom Multi Step Form" in Plugins
-Mondula:     multi-step-form         →  "Multi Step Form" by Mondula (different)
+Links folder custom-multi-step-form → "Custom Multi Step Form" in Plugins.
 
 Optional:
   LOCAL_SITE_PLUGIN_DIR=/path/to/wp-content/plugins/custom-multi-step-form
