@@ -307,18 +307,7 @@ class MSF_Admin {
             return;
         }
 
-        $runtime_i18n = array(
-            'required'        => __('This field is required.', 'custom-multi-step-form'),
-            'submitting'      => __('Sending…', 'custom-multi-step-form'),
-            'error'           => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
-            'estimatedPrice'  => __('Aptuvenā cena', 'custom-multi-step-form'),
-            'summaryTitle'    => __('Kopsavilkums', 'custom-multi-step-form'),
-            'yourAnswers'     => __('Jūsu atbildes', 'custom-multi-step-form'),
-            'total'           => __('Kopā', 'custom-multi-step-form'),
-            'consentAccepted' => __('Piekrīts', 'custom-multi-step-form'),
-            'fileHint'        => __('Max. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
-            'previewSubmit'   => __('Preview mode — save the form and view on a page to submit.', 'custom-multi-step-form'),
-        );
+        $runtime_i18n = MSF_I18n::runtime_strings();
         ?>
         <p class="description"><?php esc_html_e('Interactive preview (submissions disabled).', 'custom-multi-step-form'); ?></p>
         <div

@@ -12,29 +12,30 @@ class MSF_Submit {
     }
 
     public function handle() {
-        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        $errors = MSF_I18n::submit_error_strings();
+        $nonce  = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
 
         if (!wp_verify_nonce($nonce, 'msf_submit')) {
             wp_send_json_error(
-                array('message' => __('Session expired. Please refresh the page and try again.', 'custom-multi-step-form')),
+                array('message' => $errors['session_expired']),
                 403
             );
         }
 
         if (!empty($_POST['msf_hp'])) {
-            wp_send_json_error(array('message' => __('Invalid submission.', 'custom-multi-step-form')), 400);
+            wp_send_json_error(array('message' => $errors['invalid_submit']), 400);
         }
 
         $form_id = isset($_POST['formId']) ? absint($_POST['formId']) : 0;
 
         if (!$form_id || get_post_status($form_id) !== 'publish' || get_post_type($form_id) !== 'msf_form') {
-            wp_send_json_error(array('message' => __('Form not found.', 'custom-multi-step-form')), 404);
+            wp_send_json_error(array('message' => $errors['form_not_found']), 404);
         }
 
         $config = MSF_Form_Config::get($form_id);
 
         if (!$config || empty($config['steps'])) {
-            wp_send_json_error(array('message' => __('Form is not configured.', 'custom-multi-step-form')), 400);
+            wp_send_json_error(array('message' => $errors['not_configured']), 400);
         }
 
         $raw_answers = isset($_POST['answers']) ? json_decode(wp_unslash($_POST['answers']), true) : array();
@@ -53,7 +54,7 @@ class MSF_Submit {
         $entry_id       = $this->save_entry($form_id, $validated, $config, $pricing_result);
 
         if (!$entry_id) {
-            wp_send_json_error(array('message' => __('Could not save submission.', 'custom-multi-step-form')), 500);
+            wp_send_json_error(array('message' => $errors['save_failed']), 500);
         }
 
         $owner_email = MSF_Form_Config::get_owner_email($form_id);
@@ -74,8 +75,9 @@ class MSF_Submit {
     }
 
     private function validate_answers($config, $raw_answers) {
-        $formatted      = array();
-        $visible_steps  = MSF_Logic::get_visible_steps($config['steps'], $raw_answers);
+        $errors        = MSF_I18n::submit_error_strings();
+        $formatted     = array();
+        $visible_steps = MSF_Logic::get_visible_steps($config['steps'], $raw_answers);
 
         foreach ($visible_steps as $step) {
             if (!empty($step['type']) && $step['type'] === 'summary') {
@@ -95,8 +97,7 @@ class MSF_Submit {
             }
 
             if (!empty($question['required']) && $this->is_empty_answer($question, $value)) {
-                /* translators: %s: question label */
-                return new WP_Error('required', sprintf(__('Please answer: %s', 'custom-multi-step-form'), $question['label']));
+                return new WP_Error('required', sprintf($errors['required_field'], $question['label']));
             }
 
             if ($this->is_empty_answer($question, $value)) {
@@ -107,7 +108,7 @@ class MSF_Submit {
                 case 'email':
                     $value = sanitize_email($value);
                     if (!is_email($value)) {
-                        return new WP_Error('email', __('Please enter a valid email address.', 'custom-multi-step-form'));
+                        return new WP_Error('email', $errors['invalid_email']);
                     }
                     break;
                 case 'number':
@@ -122,7 +123,7 @@ class MSF_Submit {
                 case 'radio':
                     $value = sanitize_key($value);
                     if (!$this->option_exists($question, $value)) {
-                        return new WP_Error('invalid', __('Invalid answer selected.', 'custom-multi-step-form'));
+                        return new WP_Error('invalid', $errors['invalid_answer']);
                     }
                     break;
                 case 'checkbox':
@@ -132,25 +133,25 @@ class MSF_Submit {
                     $value = array_map('sanitize_key', $value);
                     foreach ($value as $selected) {
                         if (!$this->option_exists($question, $selected)) {
-                            return new WP_Error('invalid', __('Invalid answer selected.', 'custom-multi-step-form'));
+                            return new WP_Error('invalid', $errors['invalid_answer']);
                         }
                     }
                     break;
                 case 'date':
                     $value = sanitize_text_field($value);
                     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-                        return new WP_Error('date', __('Please enter a valid date.', 'custom-multi-step-form'));
+                        return new WP_Error('date', $errors['invalid_date']);
                     }
                     break;
                 case 'file':
                     if (!is_array($value) || empty($value['url'])) {
-                        return new WP_Error('file', __('Invalid file upload.', 'custom-multi-step-form'));
+                        return new WP_Error('file', $errors['invalid_file']);
                     }
                     break;
                 case 'consent':
                     $value = $value === '1' || $value === 1 || $value === true;
                     if (!$value) {
-                        return new WP_Error('consent', __('Consent is required.', 'custom-multi-step-form'));
+                        return new WP_Error('consent', $errors['consent_required']);
                     }
                     $value = '1';
                     break;
@@ -247,7 +248,7 @@ class MSF_Submit {
         }
 
         if ($question['type'] === 'consent') {
-            return __('Accepted', 'custom-multi-step-form');
+            return __('Piekrīts', 'custom-multi-step-form');
         }
 
         if ($question['type'] === 'date' && is_string($value)) {

@@ -22,6 +22,7 @@ require_once MSF_PLUGIN_DIR . 'includes/class-msf-mail.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-upload.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-logic.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-pricing.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-i18n.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-form-config.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-seeder.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-cpt.php';

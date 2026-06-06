@@ -38,12 +38,14 @@ class MSF_Upload {
      * @return array|WP_Error Upload result with url, file, name keys.
      */
     public static function handle($file, $question = array()) {
+        $errors = MSF_I18n::submit_error_strings();
+
         if (empty($file['name']) || !empty($file['error'])) {
-            return new WP_Error('upload', __('File upload failed.', 'custom-multi-step-form'));
+            return new WP_Error('upload', $errors['upload_failed']);
         }
 
         if (!empty($file['size']) && $file['size'] > self::get_max_bytes($question)) {
-            return new WP_Error('upload_size', __('File is too large.', 'custom-multi-step-form'));
+            return new WP_Error('upload_size', $errors['file_too_large']);
         }
 
         require_once ABSPATH . 'wp-admin/includes/file.php';

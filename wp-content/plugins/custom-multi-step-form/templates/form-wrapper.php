@@ -38,7 +38,7 @@ $style_attr     = !empty($inline_styles) ? ' style="' . esc_attr(implode('; ', $
     <div class="msf-form__price-bar" hidden></div>
 
     <div class="msf-form__body">
-        <p class="msf-form__loading"><?php esc_html_e('Loading form…', 'custom-multi-step-form'); ?></p>
+        <p class="msf-form__loading"><?php echo esc_html(MSF_I18n::runtime_strings()['loading']); ?></p>
     </div>
 
     <div class="msf-form__honeypot" aria-hidden="true">

@@ -42,7 +42,7 @@
     }
 
     function getPayloadMessage(payload, fallback) {
-        fallback = fallback || 'Something went wrong. Please try again.';
+        fallback = fallback || 'Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.';
 
         if (!payload || !payload.data) {
             return fallback;
@@ -300,13 +300,17 @@
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
             || (window.msfRuntime && window.msfRuntime.i18n)
             || {
-                required: 'This field is required.',
-                submitting: 'Sending…',
-                error: 'Something went wrong. Please try again.',
+                required: 'Šis lauks ir obligāts.',
+                submitting: 'Nosūta…',
+                error: 'Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.',
                 estimatedPrice: 'Aptuvenā cena',
                 summaryTitle: 'Kopsavilkums',
                 yourAnswers: 'Jūsu atbildes',
-                total: 'Kopā'
+                total: 'Kopā',
+                consentAccepted: 'Piekrīts',
+                fileHint: 'Maks. %s MB (JPG, PNG, PDF, DOC)',
+                previewSubmit: 'Priekšskatījums — saglabājiet formu un skatiet lapā, lai nosūtītu.',
+                loading: 'Ielādē formu…'
             };
     }
 
@@ -782,7 +786,7 @@
     };
 
     MSForm.prototype.validateCurrent = function (question) {
-        var message = this.i18n.required || 'This field is required.';
+        var message = this.i18n.required || 'Šis lauks ir obligāts.';
         var existing = this.body.querySelector('.msf-form__error');
 
         if (existing) {
@@ -852,15 +856,15 @@
 
     MSForm.prototype.submit = function () {
         var self = this;
-        var fallbackError = this.i18n.error || 'Something went wrong. Please try again.';
-        var fallbackSuccess = this.successMessage || 'Thank you! Your submission was received.';
+        var fallbackError = this.i18n.error || 'Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.';
+        var fallbackSuccess = this.successMessage || 'Paldies! Jūsu pieteikums ir saņemts.';
 
         if (this.isPreview) {
-            this.body.innerHTML = '<div class="msf-form__success"><p>' + (this.i18n.previewSubmit || 'Preview mode — submissions are disabled.') + '</p></div>';
+            this.body.innerHTML = '<div class="msf-form__success"><p>' + (this.i18n.previewSubmit || 'Priekšskatījums — nosūtīšana atspējota.') + '</p></div>';
             return;
         }
 
-        this.body.innerHTML = '<p class="msf-form__loading">' + (this.i18n.submitting || 'Sending…') + '</p>';
+        this.body.innerHTML = '<p class="msf-form__loading">' + (this.i18n.submitting || 'Nosūta…') + '</p>';
 
         var data = new FormData();
         data.append('action', 'msf_submit_form');

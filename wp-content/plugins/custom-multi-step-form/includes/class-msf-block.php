@@ -68,18 +68,7 @@ class MSF_Block {
                     'livePreview'   => __('Live preview', 'custom-multi-step-form'),
                     'previewNote'   => __('Preview only — submissions are disabled in the editor.', 'custom-multi-step-form'),
                 ),
-                'previewI18n' => array(
-                    'required'        => __('This field is required.', 'custom-multi-step-form'),
-                    'submitting'      => __('Sending…', 'custom-multi-step-form'),
-                    'error'           => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
-                    'estimatedPrice'  => __('Aptuvenā cena', 'custom-multi-step-form'),
-                    'summaryTitle'    => __('Kopsavilkums', 'custom-multi-step-form'),
-                    'yourAnswers'     => __('Jūsu atbildes', 'custom-multi-step-form'),
-                    'total'           => __('Kopā', 'custom-multi-step-form'),
-                    'consentAccepted' => __('Piekrīts', 'custom-multi-step-form'),
-                    'fileHint'        => __('Max. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
-                    'previewSubmit'   => __('Preview mode — publish the page to accept submissions.', 'custom-multi-step-form'),
-                ),
+                'previewI18n' => MSF_I18n::runtime_strings(),
             )
         );
     }
@@ -196,11 +185,7 @@ class MSF_Block {
                 array(
                     'ajaxUrl' => admin_url('admin-ajax.php'),
                     'nonce'   => wp_create_nonce('msf_submit'),
-                    'i18n'    => array(
-                        'required'   => __('This field is required.', 'custom-multi-step-form'),
-                        'submitting' => __('Sending…', 'custom-multi-step-form'),
-                        'error'      => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
-                    ),
+                    'i18n'    => MSF_I18n::runtime_strings(),
                 )
             );
             self::$runtime_localized = true;
@@ -212,17 +197,7 @@ class MSF_Block {
         $title        = $show_title ? get_the_title($form_id) : '';
         $page_url     = get_permalink() ? get_permalink() : '';
         $submit_nonce = wp_create_nonce('msf_submit');
-        $runtime_i18n = array(
-            'required'       => __('This field is required.', 'custom-multi-step-form'),
-            'submitting'     => __('Sending…', 'custom-multi-step-form'),
-            'error'          => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
-            'estimatedPrice' => __('Aptuvenā cena', 'custom-multi-step-form'),
-            'summaryTitle'   => __('Kopsavilkums', 'custom-multi-step-form'),
-            'yourAnswers'    => __('Jūsu atbildes', 'custom-multi-step-form'),
-            'total'          => __('Kopā', 'custom-multi-step-form'),
-            'consentAccepted'=> __('Piekrīts', 'custom-multi-step-form'),
-            'fileHint'       => __('Max. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
-        );
+        $runtime_i18n = MSF_I18n::runtime_strings();
 
         $inline_styles = self::build_inline_styles($attributes);
         $wrapper_class = apply_filters('msf_form_wrapper_classes', array('msf-form'), $form_id, $attributes);
