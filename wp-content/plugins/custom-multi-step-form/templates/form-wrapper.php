@@ -31,6 +31,8 @@ $runtime_i18n   = isset($runtime_i18n) ? $runtime_i18n : array();
         <div class="msf-form__progress-bar"></div>
     </div>
 
+    <div class="msf-form__price-bar" hidden></div>
+
     <div class="msf-form__body">
         <p class="msf-form__loading"><?php esc_html_e('Loading form…', 'custom-multi-step-form'); ?></p>
     </div>

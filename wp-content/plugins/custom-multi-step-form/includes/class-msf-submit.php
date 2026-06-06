@@ -49,18 +49,18 @@ class MSF_Submit {
             wp_send_json_error(array('message' => $validated->get_error_message()), 400);
         }
 
-        $entry_id = $this->save_entry($form_id, $validated, $config);
+        $pricing_result = MSF_Pricing::calculate($config, $raw_answers);
+        $entry_id       = $this->save_entry($form_id, $validated, $config, $pricing_result);
 
         if (!$entry_id) {
             wp_send_json_error(array('message' => __('Could not save submission.', 'custom-multi-step-form')), 500);
         }
 
         $owner_email = MSF_Form_Config::get_owner_email($form_id);
-
         $customer_email = $this->find_email_answer($config, $raw_answers);
 
         if ($owner_email) {
-            $this->send_owner_email($owner_email, $form_id, $validated, $config, $customer_email);
+            $this->send_owner_email($owner_email, $form_id, $validated, $config, $customer_email, $pricing_result);
         }
 
         if ($customer_email) {
@@ -74,9 +74,14 @@ class MSF_Submit {
     }
 
     private function validate_answers($config, $raw_answers) {
-        $formatted = array();
+        $formatted      = array();
+        $visible_steps  = MSF_Logic::get_visible_steps($config['steps'], $raw_answers);
 
-        foreach ($config['steps'] as $step) {
+        foreach ($visible_steps as $step) {
+            if (!empty($step['type']) && $step['type'] === 'summary') {
+                continue;
+            }
+
             if (empty($step['questions'][0])) {
                 continue;
             }
@@ -202,7 +207,7 @@ class MSF_Submit {
         return '';
     }
 
-    private function save_entry($form_id, $answers, $config) {
+    private function save_entry($form_id, $answers, $config, $pricing_result) {
         $title = sprintf(
             '%s — %s',
             get_the_title($form_id),
@@ -226,13 +231,13 @@ class MSF_Submit {
 
         update_post_meta($entry_id, '_msf_entry_form_id', $form_id);
         update_post_meta($entry_id, '_msf_entry_answers', $answers);
-        update_post_meta($entry_id, '_msf_entry_pricing', array('total' => 0, 'lines' => array()));
+        update_post_meta($entry_id, '_msf_entry_pricing', $pricing_result);
         update_post_meta($entry_id, '_msf_entry_page_url', isset($_POST['pageUrl']) ? esc_url_raw(wp_unslash($_POST['pageUrl'])) : '');
 
         return $entry_id;
     }
 
-    private function send_owner_email($to, $form_id, $answers, $config, $reply_to = '') {
+    private function send_owner_email($to, $form_id, $answers, $config, $reply_to = '', $pricing_result = array()) {
         $subject = sprintf(
             '[%s] %s',
             wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES),
@@ -243,6 +248,11 @@ class MSF_Submit {
 
         foreach ($answers as $row) {
             $lines[] = $row['label'] . ': ' . $row['display'];
+        }
+
+        if (!empty($config['pricing']['enabled']) && !empty($pricing_result)) {
+            $lines[] = '';
+            $lines[] = MSF_Pricing::format_result_for_email($pricing_result);
         }
 
         $lines[] = '';

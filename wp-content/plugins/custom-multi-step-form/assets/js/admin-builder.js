@@ -9,6 +9,7 @@
     }
 
     var stepIndex = 0;
+    var initialSteps = [];
 
     function parseInitial() {
         try {
@@ -32,7 +33,16 @@
         }
 
         return options.map(function (opt) {
-            return opt.value + '|' + opt.label;
+            var line = opt.value + '|' + opt.label;
+
+            if (opt.priceEffect && opt.priceEffect.add) {
+                line += '|+' + opt.priceEffect.add;
+                if (opt.priceEffect.perGuest) {
+                    line += '|guest';
+                }
+            }
+
+            return line;
         }).join('\n');
     }
 
@@ -42,11 +52,26 @@
             if (!line) {
                 return null;
             }
-            var parts = line.split('|');
-            return {
-                value: (parts[0] || '').trim(),
-                label: (parts[1] || parts[0] || '').trim()
+
+            var parts = line.split('|').map(function (part) {
+                return part.trim();
+            });
+            var option = {
+                value: parts[0] || '',
+                label: parts[1] || parts[0] || ''
             };
+
+            if (parts[2]) {
+                var match = parts[2].match(/^\+?(-?\d+(?:\.\d+)?)/);
+                if (match) {
+                    option.priceEffect = { add: parseFloat(match[1]) };
+                    if (parts[3] === 'guest' || parts[3] === 'perGuest') {
+                        option.priceEffect.perGuest = true;
+                    }
+                }
+            }
+
+            return option;
         }).filter(Boolean);
     }
 
@@ -57,20 +82,42 @@
             required: true,
             options: []
         };
-
+        var stepType = step.type || 'question';
+        var visibility = step.visibility || { mode: 'always' };
+        var condition = (visibility.conditions && visibility.conditions[0]) || {};
         var needsOptions = question.type === 'radio' || question.type === 'checkbox';
         var optionsDisplay = needsOptions ? '' : ' style="display:none;"';
+        var isSummary = stepType === 'summary';
 
         var html = '<div class="msf-step-card" data-index="' + index + '">';
         html += '<div class="msf-step-card__head">';
         html += '<strong>' + msfAdmin.i18n.step + ' <span class="msf-step-num">' + (index + 1) + '</span></strong>';
         html += '<button type="button" class="button-link-delete msf-remove-step">' + msfAdmin.i18n.removeStep + '</button>';
         html += '</div>';
+        html += '<p><label>' + msfAdmin.i18n.stepType + '<br><select class="msf-step-type">';
+        html += '<option value="question"' + (stepType === 'question' ? ' selected' : '') + '>' + msfAdmin.i18n.stepTypeQuestion + '</option>';
+        html += '<option value="summary"' + (stepType === 'summary' ? ' selected' : '') + '>' + msfAdmin.i18n.stepTypeSummary + '</option>';
+        html += '</select></label></p>';
         html += '<p><label>' + msfAdmin.i18n.stepTitle + '<br><input type="text" class="widefat msf-step-title" value="' + escapeAttr(step.title || '') + '"></label></p>';
-        html += '<p><label>' + msfAdmin.i18n.questionLabel + '<br><input type="text" class="widefat msf-question-label" value="' + escapeAttr(question.label || '') + '" required></label></p>';
+        html += '<div class="msf-step-question-fields"' + (isSummary ? ' style="display:none;"' : '') + '>';
+        html += '<p><label>' + msfAdmin.i18n.questionLabel + '<br><input type="text" class="widefat msf-question-label" value="' + escapeAttr(question.label || '') + '"></label></p>';
         html += '<p><label>' + msfAdmin.i18n.questionType + '<br><select class="msf-question-type">' + optionTypeChoices(question.type || 'text') + '</select></label></p>';
         html += '<p><label><input type="checkbox" class="msf-question-required"' + (question.required ? ' checked' : '') + '> ' + msfAdmin.i18n.required + '</label></p>';
         html += '<p class="msf-options-wrap"' + optionsDisplay + '><label>' + msfAdmin.i18n.options + '<br><textarea class="widefat msf-question-options" rows="4">' + escapeText(optionsToText(question.options)) + '</textarea></label></p>';
+        html += '</div>';
+        html += '<div class="msf-step-visibility">';
+        html += '<p><label>' + msfAdmin.i18n.visibilityMode + '<br><select class="msf-visibility-mode">';
+        html += '<option value="always"' + (visibility.mode === 'always' ? ' selected' : '') + '>' + msfAdmin.i18n.visibilityAlways + '</option>';
+        html += '<option value="conditional"' + (visibility.mode === 'conditional' ? ' selected' : '') + '>' + msfAdmin.i18n.visibilityConditional + '</option>';
+        html += '</select></label></p>';
+        html += '<div class="msf-visibility-conditions"' + (visibility.mode === 'conditional' ? '' : ' style="display:none;"') + '>';
+        html += '<p><label>' + msfAdmin.i18n.visibilityQuestion + '<br><input type="text" class="regular-text msf-visibility-question" value="' + escapeAttr(condition.questionId || '') + '" placeholder="q_event_type"></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.visibilityOperator + '<br><select class="msf-visibility-operator">';
+        html += '<option value="equals"' + ((condition.operator || 'equals') === 'equals' ? ' selected' : '') + '>equals</option>';
+        html += '<option value="notEquals"' + (condition.operator === 'notEquals' ? ' selected' : '') + '>notEquals</option>';
+        html += '</select></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.visibilityValue + '<br><input type="text" class="regular-text msf-visibility-value" value="' + escapeAttr(condition.value || '') + '"></label></p>';
+        html += '</div></div>';
         html += '</div>';
 
         return html;
@@ -90,6 +137,7 @@
     }
 
     function render(steps) {
+        initialSteps = steps.slice();
         $builder.empty();
         stepIndex = 0;
 
@@ -126,9 +174,42 @@
 
         $builder.find('.msf-step-card').each(function (i) {
             var $card = $(this);
+            var prev = initialSteps[i] || {};
+            var stepType = $card.find('.msf-step-type').val() || 'question';
+            var visibilityMode = $card.find('.msf-visibility-mode').val() || 'always';
+            var step = {
+                id: prev.id || ('step_' + (i + 1)),
+                type: stepType,
+                title: $card.find('.msf-step-title').val(),
+                description: prev.description || '',
+                visibility: {
+                    mode: visibilityMode,
+                    logic: 'and',
+                    conditions: []
+                },
+                questions: []
+            };
+
+            if (prev.interval) {
+                step.interval = prev.interval;
+            }
+
+            if (visibilityMode === 'conditional') {
+                step.visibility.conditions.push({
+                    questionId: $card.find('.msf-visibility-question').val(),
+                    operator: $card.find('.msf-visibility-operator').val() || 'equals',
+                    value: $card.find('.msf-visibility-value').val()
+                });
+            }
+
+            if (stepType === 'summary') {
+                steps.push(step);
+                return;
+            }
+
             var type = $card.find('.msf-question-type').val();
             var question = {
-                id: 'q_' + (i + 1),
+                id: (prev.questions && prev.questions[0] && prev.questions[0].id) || ('q_' + (i + 1)),
                 type: type,
                 label: $card.find('.msf-question-label').val(),
                 required: $card.find('.msf-question-required').is(':checked'),
@@ -139,12 +220,8 @@
                 question.options = textToOptions($card.find('.msf-question-options').val());
             }
 
-            steps.push({
-                id: 'step_' + (i + 1),
-                title: $card.find('.msf-step-title').val(),
-                description: '',
-                questions: [question]
-            });
+            step.questions = [question];
+            steps.push(step);
         });
 
         return steps;
@@ -160,6 +237,15 @@
         if ($(this).hasClass('msf-question-type')) {
             var needsOptions = $(this).val() === 'radio' || $(this).val() === 'checkbox';
             $card.find('.msf-options-wrap').toggle(needsOptions);
+        }
+
+        if ($(this).hasClass('msf-step-type')) {
+            var isSummary = $(this).val() === 'summary';
+            $card.find('.msf-step-question-fields').toggle(!isSummary);
+        }
+
+        if ($(this).hasClass('msf-visibility-mode')) {
+            $card.find('.msf-visibility-conditions').toggle($(this).val() === 'conditional');
         }
 
         syncHidden();

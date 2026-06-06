@@ -44,11 +44,7 @@
     function getPayloadMessage(payload, fallback) {
         fallback = fallback || 'Something went wrong. Please try again.';
 
-        if (!payload) {
-            return fallback;
-        }
-
-        if (!payload.data) {
+        if (!payload || !payload.data) {
             return fallback;
         }
 
@@ -61,6 +57,212 @@
         }
 
         return fallback;
+    }
+
+    function evaluateCondition(condition, answers) {
+        if (!condition) {
+            return true;
+        }
+
+        var questionId = condition.questionId || '';
+        var operator = condition.operator || 'equals';
+        var expected = condition.value;
+        var actual = questionId && answers[questionId] !== undefined ? answers[questionId] : null;
+
+        switch (operator) {
+            case 'notEquals':
+                return String(actual) !== String(expected);
+            case 'greaterThan':
+                return parseFloat(actual) > parseFloat(expected);
+            case 'lessThan':
+                return parseFloat(actual) < parseFloat(expected);
+            case 'greaterOrEqual':
+                return parseFloat(actual) >= parseFloat(expected);
+            case 'lessOrEqual':
+                return parseFloat(actual) <= parseFloat(expected);
+            case 'contains':
+                if (Array.isArray(actual)) {
+                    return actual.indexOf(expected) !== -1;
+                }
+                return String(actual).indexOf(String(expected)) !== -1;
+            case 'notContains':
+                if (Array.isArray(actual)) {
+                    return actual.indexOf(expected) === -1;
+                }
+                return String(actual).indexOf(String(expected)) === -1;
+            case 'isEmpty':
+                return actual === null || actual === '' || (Array.isArray(actual) && !actual.length);
+            case 'isNotEmpty':
+                return !(actual === null || actual === '' || (Array.isArray(actual) && !actual.length));
+            case 'in':
+                var list = Array.isArray(expected) ? expected : String(expected).split(',').map(function (item) { return item.trim(); });
+                if (Array.isArray(actual)) {
+                    return actual.some(function (item) { return list.indexOf(String(item)) !== -1; });
+                }
+                return list.indexOf(String(actual)) !== -1;
+            case 'notIn':
+                var notList = Array.isArray(expected) ? expected : String(expected).split(',').map(function (item) { return item.trim(); });
+                if (Array.isArray(actual)) {
+                    return !actual.some(function (item) { return notList.indexOf(String(item)) !== -1; });
+                }
+                return notList.indexOf(String(actual)) === -1;
+            case 'equals':
+            default:
+                if (Array.isArray(actual)) {
+                    return actual.indexOf(expected) !== -1;
+                }
+                return String(actual) === String(expected);
+        }
+    }
+
+    function evaluateGroup(group, answers) {
+        var logic = group.logic === 'or' ? 'or' : 'and';
+        var conditions = group.conditions || [];
+
+        if (!conditions.length) {
+            return true;
+        }
+
+        if (logic === 'or') {
+            return conditions.some(function (condition) {
+                return evaluateCondition(condition, answers);
+            });
+        }
+
+        return conditions.every(function (condition) {
+            return evaluateCondition(condition, answers);
+        });
+    }
+
+    function isVisible(visibility, answers) {
+        visibility = visibility || { mode: 'always' };
+
+        if (visibility.mode === 'never') {
+            return false;
+        }
+
+        if (visibility.mode !== 'conditional') {
+            return true;
+        }
+
+        return evaluateGroup(visibility, answers);
+    }
+
+    function getGuestCount(pricing, answers) {
+        var questionId = pricing.perGuestQuestionId || '';
+
+        if (questionId && answers[questionId] !== undefined && answers[questionId] !== '') {
+            return Math.max(0, parseFloat(answers[questionId]) || 0);
+        }
+
+        return 0;
+    }
+
+    function formatMoney(amount, currency) {
+        var formatted = Number(amount).toFixed(2).replace('.', ',');
+
+        if (currency === 'EUR') {
+            return formatted + ' €';
+        }
+
+        return formatted + ' ' + currency;
+    }
+
+    function hasGuestCountAnswer(pricing, answers) {
+        var guestQuestionId = pricing.perGuestQuestionId || '';
+
+        if (!guestQuestionId) {
+            return true;
+        }
+
+        if (answers[guestQuestionId] === undefined || answers[guestQuestionId] === null || answers[guestQuestionId] === '') {
+            return false;
+        }
+
+        return true;
+    }
+
+    function calculatePricing(config, answers, options) {
+        options = options || {};
+        var pricing = config.pricing || {};
+
+        if (!pricing.enabled) {
+            return { total: 0, lines: [], currency: pricing.currency || 'EUR' };
+        }
+
+        var currency = pricing.currency || 'EUR';
+
+        if (options.estimated && !hasGuestCountAnswer(pricing, answers)) {
+            return { total: 0, lines: [], currency: currency };
+        }
+
+        var total = parseFloat(pricing.baseAmount) || 0;
+        var lines = [];
+        var guestCount = getGuestCount(pricing, answers);
+        var perGuestRate = parseFloat(pricing.perGuestRate) || 0;
+
+        if (total > 0) {
+            lines.push({ label: 'Bāzes maksa', amount: total });
+        }
+
+        if (perGuestRate > 0 && guestCount > 0) {
+            var guestAmount = perGuestRate * guestCount;
+            total += guestAmount;
+            lines.push({
+                label: 'Ēdiens (' + guestCount + ' viesi × ' + formatMoney(perGuestRate, currency) + ')',
+                amount: guestAmount
+            });
+        }
+
+        getVisibleSteps(config.steps, answers).forEach(function (step) {
+            if (!step.questions || !step.questions[0] || step.type === 'summary') {
+                return;
+            }
+
+            var question = step.questions[0];
+            var answer = answers[question.id];
+
+            if (answer === null || answer === undefined || answer === '') {
+                return;
+            }
+
+            if (question.type !== 'radio' && question.type !== 'checkbox') {
+                return;
+            }
+
+            var selected = Array.isArray(answer) ? answer : [answer];
+
+            (question.options || []).forEach(function (option) {
+                if (selected.indexOf(option.value) === -1 || !option.priceEffect) {
+                    return;
+                }
+
+                var amount = parseFloat(option.priceEffect.add) || 0;
+
+                if (option.priceEffect.perGuest) {
+                    amount *= Math.max(1, guestCount);
+                }
+
+                if (amount <= 0) {
+                    return;
+                }
+
+                total += amount;
+                lines.push({ label: option.label, amount: amount });
+            });
+        });
+
+        return {
+            total: Math.round(total * 100) / 100,
+            lines: lines,
+            currency: currency
+        };
+    }
+
+    function getVisibleSteps(steps, answers) {
+        return (steps || []).filter(function (step) {
+            return isVisible(step.visibility, answers);
+        });
     }
 
     function MSForm(root) {
@@ -76,18 +278,48 @@
             || (window.msfRuntime && window.msfRuntime.nonce)
             || '';
         this.body = root.querySelector('.msf-form__body');
+        this.progressWrap = root.querySelector('.msf-form__progress');
         this.progressBar = root.querySelector('.msf-form__progress-bar');
+        this.priceBar = root.querySelector('.msf-form__price-bar');
         this.hp = root.querySelector('input[name="msf_hp"]');
-        this.currentIndex = 0;
+        this.currentStepId = null;
+        this.history = [];
         this.answers = {};
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
             || (window.msfRuntime && window.msfRuntime.i18n)
             || {
                 required: 'This field is required.',
                 submitting: 'Sending…',
-                error: 'Something went wrong. Please try again.'
+                error: 'Something went wrong. Please try again.',
+                estimatedPrice: 'Aptuvenā cena',
+                summaryTitle: 'Kopsavilkums',
+                yourAnswers: 'Jūsu atbildes',
+                total: 'Kopā'
             };
     }
+
+    MSForm.prototype.getTransitionMs = function () {
+        var settings = this.config.settings || {};
+        return parseInt(settings.stepTransitionMs, 10) || 400;
+    };
+
+    MSForm.prototype.getVisibleSteps = function () {
+        return getVisibleSteps(this.config.steps, this.answers);
+    };
+
+    MSForm.prototype.getCurrentStep = function () {
+        var steps = this.getVisibleSteps();
+        var self = this;
+
+        if (this.currentStepId) {
+            var found = steps.find(function (step) { return step.id === self.currentStepId; });
+            if (found) {
+                return found;
+            }
+        }
+
+        return steps[0] || null;
+    };
 
     MSForm.prototype.init = function () {
         if (!this.config || !this.config.steps || !this.config.steps.length) {
@@ -95,47 +327,240 @@
             return;
         }
 
+        var first = this.getVisibleSteps()[0];
+
+        if (!first) {
+            this.body.innerHTML = '';
+            return;
+        }
+
+        this.currentStepId = first.id;
         this.renderStep();
     };
 
-    MSForm.prototype.getVisibleSteps = function () {
-        return this.config.steps;
+    MSForm.prototype.updateProgress = function () {
+        if (!this.progressBar || !this.progressWrap) {
+            return;
+        }
+
+        var settings = this.config.settings || {};
+        var steps = this.getVisibleSteps();
+
+        if (!settings.showProgressBar) {
+            this.progressWrap.style.display = 'none';
+            return;
+        }
+
+        this.progressWrap.style.display = '';
+        var index = steps.findIndex(function (step) { return step.id === this.currentStepId; }.bind(this));
+        var percent = steps.length ? ((index + 1) / steps.length) * 100 : 0;
+        this.progressBar.style.width = percent + '%';
+    };
+
+    MSForm.prototype.updatePriceBar = function () {
+        if (!this.priceBar) {
+            return;
+        }
+
+        var pricing = this.config.pricing || {};
+        var displayOn = pricing.displayOn || 'summary';
+
+        if (!pricing.enabled || displayOn === 'summary' || displayOn === 'none') {
+            this.priceBar.hidden = true;
+            return;
+        }
+
+        if (displayOn !== 'sticky' && displayOn !== 'both') {
+            this.priceBar.hidden = true;
+            return;
+        }
+
+        var result = calculatePricing(this.config, this.getAnswersForPricing(), { estimated: true });
+        this.priceBar.hidden = false;
+        this.priceBar.innerHTML = '<span class="msf-form__price-label">' + (this.i18n.estimatedPrice || 'Aptuvenā cena') + '</span>'
+            + '<span class="msf-form__price-value">' + formatMoney(result.total, result.currency) + '</span>';
+    };
+
+    MSForm.prototype.readQuestionValue = function (question) {
+        if (!question || !this.body) {
+            return null;
+        }
+
+        if (question.type === 'checkbox') {
+            return Array.prototype.map.call(
+                this.body.querySelectorAll('[name="' + question.id + '[]"]:checked'),
+                function (input) { return input.value; }
+            );
+        }
+
+        if (question.type === 'radio') {
+            var checked = this.body.querySelector('[name="' + question.id + '"]:checked');
+            return checked ? checked.value : '';
+        }
+
+        var field = this.body.querySelector('[name="' + question.id + '"]');
+        return field ? field.value : '';
+    };
+
+    MSForm.prototype.getAnswersForPricing = function () {
+        var answers = Object.assign({}, this.answers);
+        var step = this.getCurrentStep();
+
+        if (!step || step.type === 'summary' || !step.questions || !step.questions[0]) {
+            return answers;
+        }
+
+        var question = step.questions[0];
+        var currentValue = this.readQuestionValue(question);
+
+        if (currentValue !== null && currentValue !== '') {
+            answers[question.id] = currentValue;
+        }
+
+        return answers;
+    };
+
+    MSForm.prototype.renderPriceBreakdown = function (result) {
+        var wrap = el('div', { className: 'msf-form__price-breakdown' });
+        var list = el('ul', { className: 'msf-form__price-lines' });
+
+        (result.lines || []).forEach(function (line) {
+            list.appendChild(el('li', {
+                className: 'msf-form__price-line',
+                html: '<span>' + line.label + '</span><span>' + formatMoney(line.amount, result.currency) + '</span>'
+            }));
+        });
+
+        wrap.appendChild(list);
+        wrap.appendChild(el('p', {
+            className: 'msf-form__price-total',
+            html: '<strong>' + (this.i18n.total || 'Kopā') + ':</strong> ' + formatMoney(result.total, result.currency)
+        }));
+
+        return wrap;
+    };
+
+    MSForm.prototype.getAnswerDisplay = function (question, value) {
+        if (question.type === 'checkbox' && Array.isArray(value)) {
+            return value.map(function (selected) {
+                var option = (question.options || []).find(function (opt) { return opt.value === selected; });
+                return option ? option.label : selected;
+            }).join(', ');
+        }
+
+        if (question.type === 'radio') {
+            var match = (question.options || []).find(function (opt) { return opt.value === value; });
+            return match ? match.label : String(value);
+        }
+
+        if (Array.isArray(value)) {
+            return value.join(', ');
+        }
+
+        return String(value || '');
+    };
+
+    MSForm.prototype.renderSummary = function (panel) {
+        var settings = this.config.settings || {};
+        var title = settings.summaryTitle || this.i18n.summaryTitle || 'Kopsavilkums';
+
+        panel.appendChild(el('h3', { className: 'msf-form__step-title', text: title }));
+        panel.appendChild(el('p', { className: 'msf-form__summary-intro', text: this.i18n.yourAnswers || 'Jūsu atbildes' }));
+
+        var list = el('dl', { className: 'msf-form__summary-list' });
+
+        getVisibleSteps(this.config.steps, this.answers).forEach(function (step) {
+            if (!step.questions || !step.questions[0] || step.type === 'summary') {
+                return;
+            }
+
+            var question = step.questions[0];
+            var value = this.answers[question.id];
+
+            if (value === undefined || value === null || value === '') {
+                return;
+            }
+
+            list.appendChild(el('dt', { text: question.label }));
+            list.appendChild(el('dd', { text: this.getAnswerDisplay(question, value) }));
+        }.bind(this));
+
+        panel.appendChild(list);
+
+        var pricing = this.config.pricing || {};
+
+        if (pricing.enabled) {
+            panel.appendChild(this.renderPriceBreakdown(calculatePricing(this.config, this.answers)));
+        }
     };
 
     MSForm.prototype.renderStep = function () {
-        var steps = this.getVisibleSteps();
-        var step = steps[this.currentIndex];
-        var question = step.questions[0];
-        var settings = this.config.settings;
+        var step = this.getCurrentStep();
+        var settings = this.config.settings || {};
         var self = this;
+        var transitionMs = this.getTransitionMs();
+
+        if (!step) {
+            this.body.innerHTML = '';
+            return;
+        }
 
         this.body.innerHTML = '';
         this.updateProgress();
+        this.updatePriceBar();
 
-        var panel = el('div', { className: 'msf-form__step' });
+        var panel = el('div', { className: 'msf-form__step msf-form__step--enter' });
 
-        if (step.title) {
-            panel.appendChild(el('h3', { className: 'msf-form__step-title', text: step.title }));
+        if (step.type === 'summary') {
+            this.renderSummary(panel);
+        } else {
+            var question = step.questions[0];
+
+            if (step.title) {
+                panel.appendChild(el('h3', { className: 'msf-form__step-title', text: step.title }));
+            }
+
+            if (step.description) {
+                panel.appendChild(el('p', { className: 'msf-form__step-description', text: step.description }));
+            }
+
+            panel.appendChild(el('label', { className: 'msf-form__label', text: question.label }));
+
+            if (question.description) {
+                panel.appendChild(el('p', { className: 'msf-form__question-description', text: question.description }));
+            }
+
+            var fieldWrap = this.renderField(question);
+            panel.appendChild(fieldWrap);
+
+            if (this.config.pricing && this.config.pricing.enabled) {
+                var self = this;
+                fieldWrap.addEventListener('input', function () {
+                    self.updatePriceBar();
+                });
+                fieldWrap.addEventListener('change', function () {
+                    self.updatePriceBar();
+                });
+            }
         }
-
-        panel.appendChild(el('label', { className: 'msf-form__label', text: question.label }));
-        panel.appendChild(this.renderField(question));
 
         var actions = el('div', { className: 'msf-form__actions' });
 
-        if (this.currentIndex > 0) {
+        if (this.history.length > 0) {
             actions.appendChild(el('button', {
                 type: 'button',
                 className: 'msf-form__btn msf-form__btn--secondary',
                 text: settings.backLabel || 'Atpakaļ'
             }));
             actions.lastChild.addEventListener('click', function () {
-                self.currentIndex -= 1;
-                self.renderStep();
+                self.goBack();
             });
         }
 
-        var isLast = this.currentIndex >= steps.length - 1;
+        var steps = this.getVisibleSteps();
+        var currentIndex = steps.findIndex(function (item) { return item.id === step.id; });
+        var isLast = currentIndex >= steps.length - 1;
+        var question = step.type === 'summary' ? null : step.questions[0];
         var nextBtn = el('button', {
             type: 'button',
             className: 'msf-form__btn msf-form__btn--primary',
@@ -143,24 +568,65 @@
         });
 
         nextBtn.addEventListener('click', function () {
-            if (!self.validateCurrent(question)) {
+            if (question && !self.validateCurrent(question)) {
                 return;
             }
 
-            self.collectCurrent(question);
+            if (question) {
+                self.collectCurrent(question);
+            }
 
             if (isLast) {
                 self.submit();
                 return;
             }
 
-            self.currentIndex += 1;
-            self.renderStep();
+            self.goNext(step);
         });
 
         actions.appendChild(nextBtn);
         panel.appendChild(actions);
         this.body.appendChild(panel);
+
+        window.setTimeout(function () {
+            panel.classList.remove('msf-form__step--enter');
+        }, 20);
+
+        if (step.interval && step.interval.afterPreviousMs) {
+            window.setTimeout(function () {
+                panel.classList.add('msf-form__step--ready');
+            }, parseInt(step.interval.afterPreviousMs, 10) || 0);
+        } else {
+            panel.classList.add('msf-form__step--ready');
+        }
+
+        panel.style.setProperty('--msf-transition-ms', transitionMs + 'ms');
+    };
+
+    MSForm.prototype.goNext = function (currentStep) {
+        this.history.push(currentStep.id);
+
+        var steps = this.getVisibleSteps();
+        var currentIndex = steps.findIndex(function (step) { return step.id === currentStep.id; });
+        var nextStep = steps[currentIndex + 1];
+
+        if (!nextStep) {
+            return;
+        }
+
+        this.currentStepId = nextStep.id;
+        this.renderStep();
+    };
+
+    MSForm.prototype.goBack = function () {
+        var previousId = this.history.pop();
+
+        if (!previousId) {
+            return;
+        }
+
+        this.currentStepId = previousId;
+        this.renderStep();
     };
 
     MSForm.prototype.renderField = function (question) {
@@ -182,7 +648,9 @@
                     type: 'number',
                     name: question.id
                 }));
-                wrap.querySelector('input').value = value !== undefined ? value : '';
+                if (value !== undefined) {
+                    wrap.querySelector('input').value = value;
+                }
                 break;
             case 'email':
                 wrap.appendChild(el('input', {
@@ -194,8 +662,10 @@
                 break;
             case 'radio':
                 (question.options || []).forEach(function (option) {
-                    var id = question.id + '_' + option.value;
-                    var label = el('label', { className: 'msf-form__choice', html: '<input type="radio" name="' + question.id + '" value="' + option.value + '"> ' + option.label });
+                    var label = el('label', {
+                        className: 'msf-form__choice',
+                        html: '<input type="radio" name="' + question.id + '" value="' + option.value + '"> ' + option.label
+                    });
                     if (value === option.value) {
                         label.querySelector('input').checked = true;
                     }
@@ -204,7 +674,10 @@
                 break;
             case 'checkbox':
                 (question.options || []).forEach(function (option) {
-                    var label = el('label', { className: 'msf-form__choice', html: '<input type="checkbox" name="' + question.id + '[]" value="' + option.value + '"> ' + option.label });
+                    var label = el('label', {
+                        className: 'msf-form__choice',
+                        html: '<input type="checkbox" name="' + question.id + '[]" value="' + option.value + '"> ' + option.label
+                    });
                     if (Array.isArray(value) && value.indexOf(option.value) !== -1) {
                         label.querySelector('input').checked = true;
                     }
@@ -224,7 +697,6 @@
     };
 
     MSForm.prototype.validateCurrent = function (question) {
-        var field = this.body.querySelector('[name="' + question.id + '"], [name="' + question.id + '[]"]');
         var message = this.i18n.required || 'This field is required.';
         var existing = this.body.querySelector('.msf-form__error');
 
@@ -242,8 +714,9 @@
             valid = !!this.body.querySelector('[name="' + question.id + '[]"]:checked');
         } else if (question.type === 'radio') {
             valid = !!this.body.querySelector('[name="' + question.id + '"]:checked');
-        } else if (field) {
-            valid = String(field.value || '').trim() !== '';
+        } else {
+            var field = this.body.querySelector('[name="' + question.id + '"]');
+            valid = field ? String(field.value || '').trim() !== '' : false;
         }
 
         if (!valid) {
@@ -270,16 +743,6 @@
 
         var field = this.body.querySelector('[name="' + question.id + '"]');
         this.answers[question.id] = field ? field.value : '';
-    };
-
-    MSForm.prototype.updateProgress = function () {
-        if (!this.progressBar) {
-            return;
-        }
-
-        var total = this.getVisibleSteps().length;
-        var percent = total ? ((this.currentIndex + 1) / total) * 100 : 0;
-        this.progressBar.style.width = percent + '%';
     };
 
     MSForm.prototype.submit = function () {
@@ -324,14 +787,15 @@
                     throw new Error(getPayloadMessage(payload, fallbackError));
                 }
 
-                var progress = self.root.querySelector('.msf-form__progress');
+                if (self.progressWrap) {
+                    self.progressWrap.style.display = 'none';
+                }
 
-                if (progress) {
-                    progress.style.display = 'none';
+                if (self.priceBar) {
+                    self.priceBar.hidden = true;
                 }
 
                 var message = getPayloadMessage(payload, fallbackSuccess);
-
                 self.body.innerHTML = '<div class="msf-form__success"><p>' + message + '</p></div>';
             })
             .catch(function (error) {

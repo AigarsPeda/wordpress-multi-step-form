@@ -7,6 +7,8 @@ if (!defined('ABSPATH')) {
 class MSF_Seeder {
 
     const OPTION_KEY = 'msf_sample_form_seeded';
+    const CONFIG_VERSION_KEY = 'msf_sample_form_config_version';
+    const CONFIG_VERSION = 2;
 
     public static function get_banquet_quote_config() {
         $config = MSF_Form_Config::default_config();
@@ -18,14 +20,25 @@ class MSF_Seeder {
         $config['settings']['submitLabel']          = 'Nosūtīt pieteikumu';
         $config['settings']['nextLabel']            = 'Tālāk';
         $config['settings']['backLabel']            = 'Atpakaļ';
+        $config['settings']['summaryTitle']       = 'Kopsavilkums';
+        $config['settings']['stepTransitionMs']   = 400;
 
-        $config['pricing']['enabled'] = false;
+        $config['pricing'] = array(
+            'enabled'            => true,
+            'baseAmount'         => 50,
+            'perGuestRate'       => 12,
+            'perGuestQuestionId' => 'q_guest_count',
+            'displayOn'          => 'sticky',
+            'currency'           => 'EUR',
+        );
 
         $config['steps'] = array(
             array(
                 'id'          => 'step_guests',
+                'type'        => 'question',
                 'title'       => 'Viesu skaits',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'          => 'q_guest_count',
@@ -40,8 +53,10 @@ class MSF_Seeder {
             ),
             array(
                 'id'          => 'step_event_type',
+                'type'        => 'question',
                 'title'       => 'Pasākuma veids',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'       => 'q_event_type',
@@ -59,8 +74,10 @@ class MSF_Seeder {
             ),
             array(
                 'id'          => 'step_menu',
+                'type'        => 'question',
                 'title'       => 'Ēdināšana',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'       => 'q_menu_type',
@@ -68,17 +85,69 @@ class MSF_Seeder {
                         'label'    => 'Kādu ēdināšanas formātu vēlaties?',
                         'required' => true,
                         'options'  => array(
-                            array('value' => 'buffet', 'label' => 'Bufets'),
-                            array('value' => 'plated', 'label' => 'Porcijās pasniegts'),
-                            array('value' => 'coffee', 'label' => 'Kafijas pauze / uzkodas'),
+                            array(
+                                'value'       => 'buffet',
+                                'label'       => 'Bufets',
+                                'priceEffect' => array('add' => 5, 'perGuest' => true),
+                            ),
+                            array(
+                                'value'       => 'plated',
+                                'label'       => 'Porcijās pasniegts',
+                                'priceEffect' => array('add' => 12, 'perGuest' => true),
+                            ),
+                            array(
+                                'value'       => 'coffee',
+                                'label'       => 'Kafijas pauze / uzkodas',
+                                'priceEffect' => array('add' => 3, 'perGuest' => true),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            array(
+                'id'          => 'step_wedding_cake',
+                'type'        => 'question',
+                'title'       => 'Kāzu kūka',
+                'description' => '',
+                'visibility'  => array(
+                    'mode'       => 'conditional',
+                    'logic'      => 'and',
+                    'conditions' => array(
+                        array(
+                            'questionId' => 'q_event_type',
+                            'operator'   => 'equals',
+                            'value'      => 'wedding',
+                        ),
+                    ),
+                ),
+                'questions'   => array(
+                    array(
+                        'id'       => 'q_wedding_cake',
+                        'type'     => 'radio',
+                        'label'    => 'Vai vēlaties kāzu kūku no mūsu puses?',
+                        'required' => true,
+                        'options'  => array(
+                            array(
+                                'value'       => 'yes',
+                                'label'       => 'Jā, ar dekorāciju',
+                                'priceEffect' => array('add' => 80),
+                            ),
+                            array(
+                                'value'       => 'simple',
+                                'label'       => 'Jā, vienkārša',
+                                'priceEffect' => array('add' => 45),
+                            ),
+                            array('value' => 'no', 'label' => 'Nē, paši nodrošināsim'),
                         ),
                     ),
                 ),
             ),
             array(
                 'id'          => 'step_date',
+                'type'        => 'question',
                 'title'       => 'Datums',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'          => 'q_event_date',
@@ -92,8 +161,10 @@ class MSF_Seeder {
             ),
             array(
                 'id'          => 'step_notes',
+                'type'        => 'question',
                 'title'       => 'Papildu informācija',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'       => 'q_notes',
@@ -106,8 +177,10 @@ class MSF_Seeder {
             ),
             array(
                 'id'          => 'step_name',
+                'type'        => 'question',
                 'title'       => 'Kontakti',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'       => 'q_name',
@@ -120,8 +193,10 @@ class MSF_Seeder {
             ),
             array(
                 'id'          => 'step_phone',
+                'type'        => 'question',
                 'title'       => '',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'       => 'q_phone',
@@ -134,8 +209,10 @@ class MSF_Seeder {
             ),
             array(
                 'id'          => 'step_email',
+                'type'        => 'question',
                 'title'       => '',
                 'description' => '',
+                'visibility'  => array('mode' => 'always'),
                 'questions'   => array(
                     array(
                         'id'       => 'q_email',
@@ -145,6 +222,14 @@ class MSF_Seeder {
                         'options'  => array(),
                     ),
                 ),
+            ),
+            array(
+                'id'          => 'step_summary',
+                'type'        => 'summary',
+                'title'       => 'Kopsavilkums',
+                'description' => 'Pārskatiet atbildes un aptuveno cenu pirms nosūtīšanas.',
+                'visibility'  => array('mode' => 'always'),
+                'questions'   => array(),
             ),
         );
 
@@ -161,6 +246,7 @@ class MSF_Seeder {
             $form_id = (int) $existing->ID;
             MSF_Form_Config::save($form_id, self::get_banquet_quote_config());
             update_option(self::OPTION_KEY, $form_id);
+            update_option(self::CONFIG_VERSION_KEY, self::CONFIG_VERSION);
 
             return $form_id;
         }
@@ -178,6 +264,7 @@ class MSF_Seeder {
 
         MSF_Form_Config::save($post_id, self::get_banquet_quote_config());
         update_option(self::OPTION_KEY, (int) $post_id);
+        update_option(self::CONFIG_VERSION_KEY, self::CONFIG_VERSION);
 
         return (int) $post_id;
     }
@@ -196,6 +283,24 @@ class MSF_Seeder {
         return in_array($screen->id, $allowed, true);
     }
 
+    public static function maybe_upgrade_sample_form($screen) {
+        if (!$screen instanceof WP_Screen || !self::is_msf_admin_screen($screen)) {
+            return;
+        }
+
+        if (!current_user_can('edit_posts')) {
+            return;
+        }
+
+        $stored_version = (int) get_option(self::CONFIG_VERSION_KEY, 0);
+
+        if ($stored_version >= self::CONFIG_VERSION) {
+            return;
+        }
+
+        self::create_banquet_quote_form();
+    }
+
     public static function maybe_seed_sample_form($screen) {
         if (!$screen instanceof WP_Screen) {
             return;
@@ -212,6 +317,8 @@ class MSF_Seeder {
         if (self::handle_manual_seed_request()) {
             return;
         }
+
+        self::maybe_upgrade_sample_form($screen);
 
         $stored_id = absint(get_option(self::OPTION_KEY, 0));
 

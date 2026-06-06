@@ -147,9 +147,13 @@ class MSF_Block {
         $page_url     = get_permalink() ? get_permalink() : '';
         $submit_nonce = wp_create_nonce('msf_submit');
         $runtime_i18n = array(
-            'required'   => __('This field is required.', 'custom-multi-step-form'),
-            'submitting' => __('Sending…', 'custom-multi-step-form'),
-            'error'      => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
+            'required'       => __('This field is required.', 'custom-multi-step-form'),
+            'submitting'     => __('Sending…', 'custom-multi-step-form'),
+            'error'          => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
+            'estimatedPrice' => __('Aptuvenā cena', 'custom-multi-step-form'),
+            'summaryTitle'   => __('Kopsavilkums', 'custom-multi-step-form'),
+            'yourAnswers'    => __('Jūsu atbildes', 'custom-multi-step-form'),
+            'total'          => __('Kopā', 'custom-multi-step-form'),
         );
 
         ob_start();
