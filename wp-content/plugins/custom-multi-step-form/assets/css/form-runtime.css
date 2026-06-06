@@ -1,6 +1,21 @@
 .msf-form {
-    max-width: 560px;
+    --msf-color-primary: #2563eb;
+    --msf-color-primary-text: #ffffff;
+    --msf-color-border: #d1d5db;
+    --msf-color-muted-bg: #f3f4f6;
+    --msf-color-error: #b91c1c;
+    --msf-color-success-bg: #ecfdf5;
+    --msf-color-success-border: #a7f3d0;
+    --msf-color-price-bg: #eff6ff;
+    --msf-color-price-border: #bfdbfe;
+    --msf-color-price-text: #1d4ed8;
+    --msf-radius: 6px;
+    --msf-max-width: 560px;
+    --msf-font-family: inherit;
+
+    max-width: var(--msf-max-width);
     margin: 0 auto;
+    font-family: var(--msf-font-family);
 }
 
 .msf-form__title {
@@ -19,7 +34,7 @@
 .msf-form__progress-bar {
     height: 100%;
     width: 0;
-    background: #2563eb;
+    background: var(--msf-color-primary);
     transition: width 0.3s ease;
 }
 
@@ -38,8 +53,8 @@
 .msf-form__field textarea {
     width: 100%;
     padding: 0.625rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
+    border: 1px solid var(--msf-color-border);
+    border-radius: var(--msf-radius);
     font: inherit;
     box-sizing: border-box;
 }
@@ -58,32 +73,43 @@
 .msf-form__btn {
     appearance: none;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--msf-radius);
     padding: 0.625rem 1.25rem;
     font: inherit;
     cursor: pointer;
 }
 
 .msf-form__btn--primary {
-    background: #2563eb;
-    color: #fff;
+    background: var(--msf-color-primary);
+    color: var(--msf-color-primary-text);
 }
 
 .msf-form__btn--secondary {
-    background: #f3f4f6;
+    background: var(--msf-color-muted-bg);
     color: #111827;
 }
 
 .msf-form__error {
-    color: #b91c1c;
+    color: var(--msf-color-error);
     margin-top: 0.75rem;
 }
 
 .msf-form__success {
     padding: 1rem;
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    border-radius: 8px;
+    background: var(--msf-color-success-bg);
+    border: 1px solid var(--msf-color-success-border);
+    border-radius: var(--msf-radius);
+}
+
+.msf-form__field-hint,
+.msf-form__file-selected {
+    margin: 0.5rem 0 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.msf-form__consent a {
+    color: var(--msf-color-primary);
 }
 
 .msf-form__honeypot {
@@ -107,9 +133,9 @@
     gap: 1rem;
     padding: 0.75rem 1rem;
     margin-bottom: 1rem;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 8px;
+    background: var(--msf-color-price-bg);
+    border: 1px solid var(--msf-color-price-border);
+    border-radius: var(--msf-radius);
 }
 
 .msf-form__price-label {
@@ -119,7 +145,7 @@
 .msf-form__price-value {
     font-size: 1.125rem;
     font-weight: 700;
-    color: #1d4ed8;
+    color: var(--msf-color-price-text);
 }
 
 .msf-form__step {
@@ -149,8 +175,14 @@
 .msf-form__price-breakdown {
     padding: 1rem;
     background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--msf-color-border);
+    border-radius: var(--msf-radius);
+}
+
+/* Avada / theme overrides: set variables on .msf-form or a parent wrapper */
+.fusion-body .msf-form,
+.avada-footer-scripts .msf-form {
+    --msf-font-family: inherit;
 }
 
 .msf-form__price-lines {

@@ -118,19 +118,29 @@
     function evaluateGroup(group, answers) {
         var logic = group.logic === 'or' ? 'or' : 'and';
         var conditions = group.conditions || [];
+        var groups = group.groups || [];
+        var results = [];
 
-        if (!conditions.length) {
+        conditions.forEach(function (condition) {
+            results.push(evaluateCondition(condition, answers));
+        });
+
+        groups.forEach(function (nestedGroup) {
+            results.push(evaluateGroup(nestedGroup, answers));
+        });
+
+        if (!results.length) {
             return true;
         }
 
         if (logic === 'or') {
-            return conditions.some(function (condition) {
-                return evaluateCondition(condition, answers);
+            return results.some(function (result) {
+                return result;
             });
         }
 
-        return conditions.every(function (condition) {
-            return evaluateCondition(condition, answers);
+        return results.every(function (result) {
+            return result;
         });
     }
 
@@ -285,6 +295,7 @@
         this.currentStepId = null;
         this.history = [];
         this.answers = {};
+        this.fileAnswers = {};
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
             || (window.msfRuntime && window.msfRuntime.i18n)
             || {
@@ -398,6 +409,19 @@
             return checked ? checked.value : '';
         }
 
+        if (question.type === 'consent') {
+            var consentInput = this.body.querySelector('[name="' + question.id + '"]');
+            return consentInput && consentInput.checked ? '1' : '';
+        }
+
+        if (question.type === 'file') {
+            var fileInput = this.body.querySelector('[name="' + question.id + '"]');
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                return fileInput.files[0].name;
+            }
+            return this.fileAnswers[question.id] ? this.fileAnswers[question.id].name : '';
+        }
+
         var field = this.body.querySelector('[name="' + question.id + '"]');
         return field ? field.value : '';
     };
@@ -451,6 +475,24 @@
         if (question.type === 'radio') {
             var match = (question.options || []).find(function (opt) { return opt.value === value; });
             return match ? match.label : String(value);
+        }
+
+        if (question.type === 'file') {
+            if (this.fileAnswers[question.id]) {
+                return this.fileAnswers[question.id].name;
+            }
+            return value ? String(value) : '';
+        }
+
+        if (question.type === 'consent') {
+            return value === '1' || value === 1 || value === true ? (this.i18n.consentAccepted || 'Piekrīts') : '';
+        }
+
+        if (question.type === 'date' && value) {
+            var parts = String(value).split('-');
+            if (parts.length === 3) {
+                return parts[2] + '.' + parts[1] + '.' + parts[0];
+            }
         }
 
         if (Array.isArray(value)) {
@@ -684,6 +726,48 @@
                     wrap.appendChild(label);
                 });
                 break;
+            case 'date':
+                wrap.appendChild(el('input', {
+                    className: 'msf-form__input',
+                    type: 'date',
+                    name: question.id
+                }));
+                wrap.querySelector('input').value = value || '';
+                break;
+            case 'file':
+                var maxMb = (question.validation && question.validation.maxSizeMb) ? question.validation.maxSizeMb : 5;
+                var fileInput = el('input', {
+                    className: 'msf-form__input',
+                    type: 'file',
+                    name: question.id,
+                    accept: '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx'
+                });
+                wrap.appendChild(fileInput);
+                wrap.appendChild(el('p', {
+                    className: 'msf-form__field-hint',
+                    text: (this.i18n.fileHint || 'Maks. %s MB (JPG, PNG, PDF, DOC)').replace('%s', String(maxMb))
+                }));
+                if (this.fileAnswers[question.id]) {
+                    wrap.appendChild(el('p', {
+                        className: 'msf-form__file-selected',
+                        text: this.fileAnswers[question.id].name
+                    }));
+                }
+                break;
+            case 'consent':
+                var consentHtml = (question.consentText || question.label || '');
+                if (question.consentLinkUrl) {
+                    consentHtml += ' <a href="' + question.consentLinkUrl + '" target="_blank" rel="noopener noreferrer">' + (question.consentLinkLabel || question.consentLinkUrl) + '</a>';
+                }
+                var consentLabel = el('label', {
+                    className: 'msf-form__choice msf-form__consent',
+                    html: '<input type="checkbox" name="' + question.id + '" value="1"> ' + consentHtml
+                });
+                if (value === '1' || value === 1 || value === true) {
+                    consentLabel.querySelector('input').checked = true;
+                }
+                wrap.appendChild(consentLabel);
+                break;
             default:
                 wrap.appendChild(el('input', {
                     className: 'msf-form__input',
@@ -714,6 +798,11 @@
             valid = !!this.body.querySelector('[name="' + question.id + '[]"]:checked');
         } else if (question.type === 'radio') {
             valid = !!this.body.querySelector('[name="' + question.id + '"]:checked');
+        } else if (question.type === 'consent') {
+            valid = !!this.body.querySelector('[name="' + question.id + '"]:checked');
+        } else if (question.type === 'file') {
+            var fileField = this.body.querySelector('[name="' + question.id + '"]');
+            valid = !!(this.fileAnswers[question.id] || (fileField && fileField.files && fileField.files[0]));
         } else {
             var field = this.body.querySelector('[name="' + question.id + '"]');
             valid = field ? String(field.value || '').trim() !== '' : false;
@@ -741,6 +830,21 @@
             return;
         }
 
+        if (question.type === 'consent') {
+            var consentBox = this.body.querySelector('[name="' + question.id + '"]');
+            this.answers[question.id] = consentBox && consentBox.checked ? '1' : '';
+            return;
+        }
+
+        if (question.type === 'file') {
+            var fileBox = this.body.querySelector('[name="' + question.id + '"]');
+            if (fileBox && fileBox.files && fileBox.files[0]) {
+                this.fileAnswers[question.id] = fileBox.files[0];
+                this.answers[question.id] = fileBox.files[0].name;
+            }
+            return;
+        }
+
         var field = this.body.querySelector('[name="' + question.id + '"]');
         this.answers[question.id] = field ? field.value : '';
     };
@@ -756,9 +860,18 @@
         data.append('action', 'msf_submit_form');
         data.append('nonce', this.nonce);
         data.append('formId', String(this.formId));
-        data.append('answers', JSON.stringify(this.answers));
+        var answersPayload = Object.assign({}, this.answers);
+        Object.keys(this.fileAnswers).forEach(function (qid) {
+            delete answersPayload[qid];
+        });
+
+        data.append('answers', JSON.stringify(answersPayload));
         data.append('pageUrl', this.pageUrl);
         data.append('msf_hp', this.hp ? this.hp.value : '');
+
+        Object.keys(this.fileAnswers).forEach(function (qid) {
+            data.append('msf_file_' + qid, self.fileAnswers[qid]);
+        });
 
         fetch(this.ajaxUrl, {
             method: 'POST',

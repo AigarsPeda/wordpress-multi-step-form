@@ -95,6 +95,18 @@ class MSF_Block {
                     'type'    => 'boolean',
                     'default' => false,
                 ),
+                'accentColor' => array(
+                    'type'    => 'string',
+                    'default' => '',
+                ),
+                'borderRadius' => array(
+                    'type'    => 'string',
+                    'default' => '',
+                ),
+                'maxWidth' => array(
+                    'type'    => 'string',
+                    'default' => '',
+                ),
             ),
         ));
     }
@@ -154,10 +166,35 @@ class MSF_Block {
             'summaryTitle'   => __('Kopsavilkums', 'custom-multi-step-form'),
             'yourAnswers'    => __('Jūsu atbildes', 'custom-multi-step-form'),
             'total'          => __('Kopā', 'custom-multi-step-form'),
+            'consentAccepted'=> __('Piekrīts', 'custom-multi-step-form'),
+            'fileHint'       => __('Max. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
         );
+
+        $inline_styles = self::build_inline_styles($attributes);
+        $wrapper_class = apply_filters('msf_form_wrapper_classes', array('msf-form'), $form_id, $attributes);
+        $wrapper_class = is_array($wrapper_class) ? implode(' ', array_map('sanitize_html_class', $wrapper_class)) : 'msf-form';
 
         ob_start();
         include MSF_PLUGIN_DIR . 'templates/form-wrapper.php';
         return ob_get_clean();
+    }
+
+    private static function build_inline_styles($attributes) {
+        $styles = array();
+
+        if (!empty($attributes['accentColor']) && preg_match('/^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$/', $attributes['accentColor'])) {
+            $styles[] = '--msf-color-primary: ' . $attributes['accentColor'];
+            $styles[] = '--msf-color-price-text: ' . $attributes['accentColor'];
+        }
+
+        if (!empty($attributes['borderRadius']) && preg_match('/^\d+(\.\d+)?(px|rem|%)?$/', $attributes['borderRadius'])) {
+            $styles[] = '--msf-radius: ' . $attributes['borderRadius'];
+        }
+
+        if (!empty($attributes['maxWidth']) && preg_match('/^\d+(\.\d+)?(px|rem|%)?$/', $attributes['maxWidth'])) {
+            $styles[] = '--msf-max-width: ' . $attributes['maxWidth'];
+        }
+
+        return apply_filters('msf_form_inline_styles', $styles, $attributes);
     }
 }

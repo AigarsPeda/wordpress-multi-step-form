@@ -24,16 +24,30 @@ class MSF_Logic {
     }
 
     public static function evaluate_group($group, $answers) {
+        if (!is_array($group)) {
+            return true;
+        }
+
         $logic      = isset($group['logic']) && $group['logic'] === 'or' ? 'or' : 'and';
         $conditions = isset($group['conditions']) && is_array($group['conditions']) ? $group['conditions'] : array();
+        $groups     = isset($group['groups']) && is_array($group['groups']) ? $group['groups'] : array();
+        $results    = array();
 
-        if (empty($conditions)) {
+        foreach ($conditions as $condition) {
+            $results[] = self::evaluate_condition($condition, $answers);
+        }
+
+        foreach ($groups as $nested_group) {
+            $results[] = self::evaluate_group($nested_group, $answers);
+        }
+
+        if (empty($results)) {
             return true;
         }
 
         if ($logic === 'or') {
-            foreach ($conditions as $condition) {
-                if (self::evaluate_condition($condition, $answers)) {
+            foreach ($results as $result) {
+                if ($result) {
                     return true;
                 }
             }
@@ -41,8 +55,8 @@ class MSF_Logic {
             return false;
         }
 
-        foreach ($conditions as $condition) {
-            if (!self::evaluate_condition($condition, $answers)) {
+        foreach ($results as $result) {
+            if (!$result) {
                 return false;
             }
         }

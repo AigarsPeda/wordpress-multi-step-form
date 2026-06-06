@@ -11,10 +11,14 @@ $success_text   = isset($success_text) ? $success_text : '';
 $page_url       = isset($page_url) ? $page_url : '';
 $submit_nonce   = isset($submit_nonce) ? $submit_nonce : '';
 $runtime_i18n   = isset($runtime_i18n) ? $runtime_i18n : array();
+$inline_styles  = isset($inline_styles) ? $inline_styles : array();
+$wrapper_class  = isset($wrapper_class) ? $wrapper_class : 'msf-form';
+$style_attr     = !empty($inline_styles) ? ' style="' . esc_attr(implode('; ', $inline_styles)) . '"' : '';
 ?>
 <div
-    class="msf-form"
+    class="<?php echo esc_attr($wrapper_class); ?>"
     id="msf-form-<?php echo esc_attr($form_id); ?>"
+    <?php echo $style_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from sanitized values ?>
     data-msf-form-id="<?php echo esc_attr($form_id); ?>"
     data-msf-config="<?php echo esc_attr(wp_json_encode($public_config)); ?>"
     data-msf-success="<?php echo esc_attr($success_text); ?>"

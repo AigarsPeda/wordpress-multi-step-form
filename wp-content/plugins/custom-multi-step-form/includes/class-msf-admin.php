@@ -90,6 +90,11 @@ class MSF_Admin {
                 'visibilityQuestion' => __('When question ID', 'custom-multi-step-form'),
                 'visibilityOperator' => __('Operator', 'custom-multi-step-form'),
                 'visibilityValue' => __('Value', 'custom-multi-step-form'),
+                'consentText'    => __('Consent text', 'custom-multi-step-form'),
+                'consentLinkUrl' => __('Privacy policy URL', 'custom-multi-step-form'),
+                'consentLinkLabel' => __('Link label', 'custom-multi-step-form'),
+                'fileMaxSize'    => __('Max file size (MB)', 'custom-multi-step-form'),
+                'nestedGroupsNote' => __('This step has advanced nested visibility rules (preserved on save).', 'custom-multi-step-form'),
                 'types'          => array(
                     'text'     => __('Text', 'custom-multi-step-form'),
                     'textarea' => __('Long text', 'custom-multi-step-form'),
@@ -97,6 +102,9 @@ class MSF_Admin {
                     'radio'    => __('Single choice (radio)', 'custom-multi-step-form'),
                     'checkbox' => __('Multiple choice (checkbox)', 'custom-multi-step-form'),
                     'email'    => __('Email', 'custom-multi-step-form'),
+                    'date'     => __('Date', 'custom-multi-step-form'),
+                    'file'     => __('File upload', 'custom-multi-step-form'),
+                    'consent'  => __('GDPR consent checkbox', 'custom-multi-step-form'),
                 ),
             ),
         ));

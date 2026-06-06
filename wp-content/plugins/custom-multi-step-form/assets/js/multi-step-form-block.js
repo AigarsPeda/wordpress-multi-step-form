@@ -6,6 +6,7 @@
     var PanelBody = components.PanelBody;
     var SelectControl = components.SelectControl;
     var ToggleControl = components.ToggleControl;
+    var TextControl = components.TextControl;
     var Placeholder = components.Placeholder;
     var __ = i18n.__;
 
@@ -73,7 +74,10 @@
         ],
         attributes: {
             formId: { type: 'number', default: 0 },
-            showTitle: { type: 'boolean', default: false }
+            showTitle: { type: 'boolean', default: false },
+            accentColor: { type: 'string', default: '' },
+            borderRadius: { type: 'string', default: '' },
+            maxWidth: { type: 'string', default: '' }
         },
         edit: function (props) {
             var attributes = props.attributes;
@@ -106,6 +110,34 @@
                             checked: attributes.showTitle,
                             onChange: function (value) {
                                 setAttributes({ showTitle: value });
+                            }
+                        })
+                    ),
+                    el(
+                        PanelBody,
+                        { title: __('Appearance', 'custom-multi-step-form'), initialOpen: false },
+                        el(TextControl, {
+                            label: __('Accent color', 'custom-multi-step-form'),
+                            help: __('Hex color, e.g. #2563eb. Maps to --msf-color-primary.', 'custom-multi-step-form'),
+                            value: attributes.accentColor || '',
+                            onChange: function (value) {
+                                setAttributes({ accentColor: value });
+                            }
+                        }),
+                        el(TextControl, {
+                            label: __('Border radius', 'custom-multi-step-form'),
+                            help: __('CSS value, e.g. 8px. Maps to --msf-radius.', 'custom-multi-step-form'),
+                            value: attributes.borderRadius || '',
+                            onChange: function (value) {
+                                setAttributes({ borderRadius: value });
+                            }
+                        }),
+                        el(TextControl, {
+                            label: __('Max width', 'custom-multi-step-form'),
+                            help: __('CSS value, e.g. 640px. Maps to --msf-max-width.', 'custom-multi-step-form'),
+                            value: attributes.maxWidth || '',
+                            onChange: function (value) {
+                                setAttributes({ maxWidth: value });
                             }
                         })
                     )

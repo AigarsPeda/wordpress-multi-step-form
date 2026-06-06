@@ -88,14 +88,18 @@ class MSF_Submit {
 
             $question = $step['questions'][0];
             $qid      = $question['id'];
-            $value    = isset($raw_answers[$qid]) ? $raw_answers[$qid] : null;
+            $value    = $this->resolve_answer_value($question, $qid, $raw_answers);
 
-            if (!empty($question['required']) && ($value === null || $value === '' || (is_array($value) && empty($value)))) {
+            if (is_wp_error($value)) {
+                return $value;
+            }
+
+            if (!empty($question['required']) && $this->is_empty_answer($question, $value)) {
                 /* translators: %s: question label */
                 return new WP_Error('required', sprintf(__('Please answer: %s', 'custom-multi-step-form'), $question['label']));
             }
 
-            if ($value === null || $value === '') {
+            if ($this->is_empty_answer($question, $value)) {
                 continue;
             }
 
@@ -132,6 +136,24 @@ class MSF_Submit {
                         }
                     }
                     break;
+                case 'date':
+                    $value = sanitize_text_field($value);
+                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                        return new WP_Error('date', __('Please enter a valid date.', 'custom-multi-step-form'));
+                    }
+                    break;
+                case 'file':
+                    if (!is_array($value) || empty($value['url'])) {
+                        return new WP_Error('file', __('Invalid file upload.', 'custom-multi-step-form'));
+                    }
+                    break;
+                case 'consent':
+                    $value = $value === '1' || $value === 1 || $value === true;
+                    if (!$value) {
+                        return new WP_Error('consent', __('Consent is required.', 'custom-multi-step-form'));
+                    }
+                    $value = '1';
+                    break;
             }
 
             $formatted[] = array(
@@ -143,6 +165,46 @@ class MSF_Submit {
         }
 
         return $formatted;
+    }
+
+    private function resolve_answer_value($question, $qid, $raw_answers) {
+        if ($question['type'] === 'file') {
+            $file_key = 'msf_file_' . $qid;
+
+            if (empty($_FILES[$file_key]['name'])) {
+                return null;
+            }
+
+            $upload = MSF_Upload::handle($_FILES[$file_key], $question);
+
+            if (is_wp_error($upload)) {
+                return $upload;
+            }
+
+            return array(
+                'url'  => esc_url_raw($upload['url']),
+                'file' => isset($upload['file']) ? $upload['file'] : '',
+                'name' => sanitize_file_name(wp_basename($upload['file'])),
+            );
+        }
+
+        return isset($raw_answers[$qid]) ? $raw_answers[$qid] : null;
+    }
+
+    private function is_empty_answer($question, $value) {
+        if (is_wp_error($value)) {
+            return true;
+        }
+
+        if ($question['type'] === 'consent') {
+            return !($value === '1' || $value === 1 || $value === true);
+        }
+
+        if ($question['type'] === 'file') {
+            return !is_array($value) || empty($value['url']);
+        }
+
+        return $value === null || $value === '' || (is_array($value) && empty($value));
     }
 
     private function option_exists($question, $value) {
@@ -175,6 +237,24 @@ class MSF_Submit {
                 if ($option['value'] === $value) {
                     return $option['label'];
                 }
+            }
+        }
+
+        if ($question['type'] === 'file' && is_array($value)) {
+            if (!empty($value['url'])) {
+                return !empty($value['name']) ? $value['name'] . ' (' . $value['url'] . ')' : $value['url'];
+            }
+        }
+
+        if ($question['type'] === 'consent') {
+            return __('Accepted', 'custom-multi-step-form');
+        }
+
+        if ($question['type'] === 'date' && is_string($value)) {
+            $timestamp = strtotime($value);
+
+            if ($timestamp) {
+                return wp_date('d.m.Y', $timestamp);
             }
         }
 

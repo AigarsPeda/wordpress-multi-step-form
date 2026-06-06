@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Custom Multi Step Form
  * Description: Configurable multi-step form block for many different use cases.
- * Version: 0.5.0
+ * Version: 0.6.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author: A.Pēda
@@ -16,9 +16,10 @@ if (!defined('ABSPATH')) {
 define('MSF_PLUGIN_FILE', __FILE__);
 define('MSF_PLUGIN_DIR', plugin_dir_path(MSF_PLUGIN_FILE));
 define('MSF_PLUGIN_URL', plugin_dir_url(MSF_PLUGIN_FILE));
-define('MSF_VERSION', '0.5.0');
+define('MSF_VERSION', '0.6.0');
 
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-mail.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-upload.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-logic.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-pricing.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-form-config.php';

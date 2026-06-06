@@ -88,6 +88,12 @@
         var needsOptions = question.type === 'radio' || question.type === 'checkbox';
         var optionsDisplay = needsOptions ? '' : ' style="display:none;"';
         var isSummary = stepType === 'summary';
+        var isConsent = question.type === 'consent';
+        var isFile = question.type === 'file';
+        var hasNestedGroups = visibility.groups && visibility.groups.length;
+        var consentDisplay = isConsent ? '' : ' style="display:none;"';
+        var fileDisplay = isFile ? '' : ' style="display:none;"';
+        var maxSize = (question.validation && question.validation.maxSizeMb) ? question.validation.maxSizeMb : 5;
 
         var html = '<div class="msf-step-card" data-index="' + index + '">';
         html += '<div class="msf-step-card__head">';
@@ -104,6 +110,12 @@
         html += '<p><label>' + msfAdmin.i18n.questionType + '<br><select class="msf-question-type">' + optionTypeChoices(question.type || 'text') + '</select></label></p>';
         html += '<p><label><input type="checkbox" class="msf-question-required"' + (question.required ? ' checked' : '') + '> ' + msfAdmin.i18n.required + '</label></p>';
         html += '<p class="msf-options-wrap"' + optionsDisplay + '><label>' + msfAdmin.i18n.options + '<br><textarea class="widefat msf-question-options" rows="4">' + escapeText(optionsToText(question.options)) + '</textarea></label></p>';
+        html += '<div class="msf-consent-wrap"' + consentDisplay + '>';
+        html += '<p><label>' + msfAdmin.i18n.consentText + '<br><input type="text" class="widefat msf-consent-text" value="' + escapeAttr(question.consentText || question.label || '') + '"></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.consentLinkUrl + '<br><input type="url" class="widefat msf-consent-link-url" value="' + escapeAttr(question.consentLinkUrl || '') + '"></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.consentLinkLabel + '<br><input type="text" class="regular-text msf-consent-link-label" value="' + escapeAttr(question.consentLinkLabel || '') + '"></label></p>';
+        html += '</div>';
+        html += '<p class="msf-file-wrap"' + fileDisplay + '><label>' + msfAdmin.i18n.fileMaxSize + '<br><input type="number" class="small-text msf-file-max-size" min="0.1" max="20" step="0.1" value="' + escapeAttr(maxSize) + '"></label></p>';
         html += '</div>';
         html += '<div class="msf-step-visibility">';
         html += '<p><label>' + msfAdmin.i18n.visibilityMode + '<br><select class="msf-visibility-mode">';
@@ -117,6 +129,9 @@
         html += '<option value="notEquals"' + (condition.operator === 'notEquals' ? ' selected' : '') + '>notEquals</option>';
         html += '</select></label></p>';
         html += '<p><label>' + msfAdmin.i18n.visibilityValue + '<br><input type="text" class="regular-text msf-visibility-value" value="' + escapeAttr(condition.value || '') + '"></label></p>';
+        if (hasNestedGroups) {
+            html += '<p class="description">' + msfAdmin.i18n.nestedGroupsNote + '</p>';
+        }
         html += '</div></div>';
         html += '</div>';
 
@@ -200,6 +215,10 @@
                     operator: $card.find('.msf-visibility-operator').val() || 'equals',
                     value: $card.find('.msf-visibility-value').val()
                 });
+
+                if (prev.visibility && prev.visibility.groups) {
+                    step.visibility.groups = prev.visibility.groups;
+                }
             }
 
             if (stepType === 'summary') {
@@ -220,6 +239,18 @@
                 question.options = textToOptions($card.find('.msf-question-options').val());
             }
 
+            if (type === 'consent') {
+                question.consentText = $card.find('.msf-consent-text').val();
+                question.consentLinkUrl = $card.find('.msf-consent-link-url').val();
+                question.consentLinkLabel = $card.find('.msf-consent-link-label').val();
+            }
+
+            if (type === 'file') {
+                question.validation = {
+                    maxSizeMb: parseFloat($card.find('.msf-file-max-size').val()) || 5
+                };
+            }
+
             step.questions = [question];
             steps.push(step);
         });
@@ -235,8 +266,10 @@
         var $card = $(this).closest('.msf-step-card');
 
         if ($(this).hasClass('msf-question-type')) {
-            var needsOptions = $(this).val() === 'radio' || $(this).val() === 'checkbox';
-            $card.find('.msf-options-wrap').toggle(needsOptions);
+            var type = $(this).val();
+            $card.find('.msf-options-wrap').toggle(type === 'radio' || type === 'checkbox');
+            $card.find('.msf-consent-wrap').toggle(type === 'consent');
+            $card.find('.msf-file-wrap').toggle(type === 'file');
         }
 
         if ($(this).hasClass('msf-step-type')) {

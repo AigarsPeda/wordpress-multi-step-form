@@ -8,7 +8,7 @@ class MSF_Seeder {
 
     const OPTION_KEY = 'msf_sample_form_seeded';
     const CONFIG_VERSION_KEY = 'msf_sample_form_config_version';
-    const CONFIG_VERSION = 2;
+    const CONFIG_VERSION = 3;
 
     public static function get_banquet_quote_config() {
         $config = MSF_Form_Config::default_config();
@@ -151,11 +151,80 @@ class MSF_Seeder {
                 'questions'   => array(
                     array(
                         'id'          => 'q_event_date',
-                        'type'        => 'text',
+                        'type'        => 'date',
                         'label'       => 'Vēlamais pasākuma datums',
-                        'description' => 'Piemēram: 15.08.2026',
+                        'description' => '',
                         'required'    => true,
                         'options'     => array(),
+                    ),
+                ),
+            ),
+            array(
+                'id'          => 'step_large_event',
+                'type'        => 'question',
+                'title'       => 'Liels pasākums',
+                'description' => '',
+                'visibility'  => array(
+                    'mode'       => 'conditional',
+                    'logic'      => 'or',
+                    'conditions' => array(),
+                    'groups'     => array(
+                        array(
+                            'logic'      => 'and',
+                            'conditions' => array(
+                                array(
+                                    'questionId' => 'q_event_type',
+                                    'operator'   => 'equals',
+                                    'value'      => 'corporate',
+                                ),
+                                array(
+                                    'questionId' => 'q_guest_count',
+                                    'operator'   => 'greaterThan',
+                                    'value'      => '100',
+                                ),
+                            ),
+                        ),
+                        array(
+                            'logic'      => 'and',
+                            'conditions' => array(
+                                array(
+                                    'questionId' => 'q_event_type',
+                                    'operator'   => 'equals',
+                                    'value'      => 'wedding',
+                                ),
+                                array(
+                                    'questionId' => 'q_guest_count',
+                                    'operator'   => 'greaterThan',
+                                    'value'      => '80',
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+                'questions'   => array(
+                    array(
+                        'id'       => 'q_large_event_notes',
+                        'type'     => 'textarea',
+                        'label'    => 'Papildu prasības lielam pasākumam (piem., skatuve, VIP zona)',
+                        'required' => false,
+                        'options'  => array(),
+                    ),
+                ),
+            ),
+            array(
+                'id'          => 'step_menu_file',
+                'type'        => 'question',
+                'title'       => 'Ēdienkarte',
+                'description' => '',
+                'visibility'  => array('mode' => 'always'),
+                'questions'   => array(
+                    array(
+                        'id'         => 'q_menu_file',
+                        'type'       => 'file',
+                        'label'      => 'Augšupielādējiet vēlamo ēdienkarti (neobligāti)',
+                        'required'   => false,
+                        'validation' => array('maxSizeMb' => 5),
+                        'options'    => array(),
                     ),
                 ),
             ),
@@ -220,6 +289,25 @@ class MSF_Seeder {
                         'label'    => 'E-pasta adrese',
                         'required' => true,
                         'options'  => array(),
+                    ),
+                ),
+            ),
+            array(
+                'id'          => 'step_consent',
+                'type'        => 'question',
+                'title'       => 'Privātums',
+                'description' => '',
+                'visibility'  => array('mode' => 'always'),
+                'questions'   => array(
+                    array(
+                        'id'               => 'q_consent',
+                        'type'             => 'consent',
+                        'label'            => 'Piekrīšana datu apstrādei',
+                        'required'         => true,
+                        'consentText'      => 'Piekrītu personas datu apstrādei pieteikuma izvērtēšanai.',
+                        'consentLinkUrl'   => '',
+                        'consentLinkLabel' => 'Privātuma politika',
+                        'options'          => array(),
                     ),
                 ),
             ),

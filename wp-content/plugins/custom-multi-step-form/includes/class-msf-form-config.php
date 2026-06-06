@@ -8,11 +8,11 @@ class MSF_Form_Config {
 
     const META_KEY = '_msf_config';
 
-    const QUESTION_TYPES = array('text', 'textarea', 'number', 'radio', 'checkbox', 'email');
+    const QUESTION_TYPES = array('text', 'textarea', 'number', 'radio', 'checkbox', 'email', 'date', 'file', 'consent');
 
     public static function default_config() {
         return array(
-            'schemaVersion' => 2,
+            'schemaVersion' => 3,
             'settings'      => array(
                 'ownerEmail'           => '',
                 'successMessage'       => 'Paldies! Jūsu pieteikums ir saņemts.',
@@ -83,7 +83,7 @@ class MSF_Form_Config {
         }
         $config['pricing']['displayOn'] = $display_on;
 
-        $config['schemaVersion'] = 2;
+        $config['schemaVersion'] = 3;
         $config['steps']         = self::normalize_steps(
             isset($config['steps']) && is_array($config['steps']) ? $config['steps'] : array()
         );
@@ -165,6 +165,7 @@ class MSF_Form_Config {
             'mode'       => $mode,
             'logic'      => isset($visibility['logic']) && $visibility['logic'] === 'or' ? 'or' : 'and',
             'conditions' => array(),
+            'groups'     => array(),
         );
 
         if (!empty($visibility['conditions']) && is_array($visibility['conditions'])) {
@@ -178,6 +179,58 @@ class MSF_Form_Config {
                     'operator'   => sanitize_key(isset($condition['operator']) ? $condition['operator'] : 'equals'),
                     'value'      => is_array($condition['value']) ? $condition['value'] : sanitize_text_field((string) $condition['value']),
                 );
+            }
+        }
+
+        if (!empty($visibility['groups']) && is_array($visibility['groups'])) {
+            foreach ($visibility['groups'] as $group) {
+                if (!is_array($group)) {
+                    continue;
+                }
+
+                $normalized_group = self::normalize_rule_group($group);
+
+                if (!empty($normalized_group['conditions']) || !empty($normalized_group['groups'])) {
+                    $normalized['groups'][] = $normalized_group;
+                }
+            }
+        }
+
+        return $normalized;
+    }
+
+    private static function normalize_rule_group($group) {
+        $normalized = array(
+            'logic'      => isset($group['logic']) && $group['logic'] === 'or' ? 'or' : 'and',
+            'conditions' => array(),
+            'groups'     => array(),
+        );
+
+        if (!empty($group['conditions']) && is_array($group['conditions'])) {
+            foreach ($group['conditions'] as $condition) {
+                if (!is_array($condition) || empty($condition['questionId'])) {
+                    continue;
+                }
+
+                $normalized['conditions'][] = array(
+                    'questionId' => sanitize_key($condition['questionId']),
+                    'operator'   => sanitize_key(isset($condition['operator']) ? $condition['operator'] : 'equals'),
+                    'value'      => is_array($condition['value']) ? $condition['value'] : sanitize_text_field((string) $condition['value']),
+                );
+            }
+        }
+
+        if (!empty($group['groups']) && is_array($group['groups'])) {
+            foreach ($group['groups'] as $nested_group) {
+                if (!is_array($nested_group)) {
+                    continue;
+                }
+
+                $normalized_nested = self::normalize_rule_group($nested_group);
+
+                if (!empty($normalized_nested['conditions']) || !empty($normalized_nested['groups'])) {
+                    $normalized['groups'][] = $normalized_nested;
+                }
             }
         }
 
@@ -223,6 +276,18 @@ class MSF_Form_Config {
                 'min' => isset($question['validation']['min']) ? floatval($question['validation']['min']) : null,
                 'max' => isset($question['validation']['max']) ? floatval($question['validation']['max']) : null,
             );
+        }
+
+        if ($type === 'file') {
+            $normalized['validation'] = array(
+                'maxSizeMb' => isset($question['validation']['maxSizeMb']) ? floatval($question['validation']['maxSizeMb']) : 5,
+            );
+        }
+
+        if ($type === 'consent') {
+            $normalized['consentText']      = sanitize_text_field(isset($question['consentText']) ? $question['consentText'] : $label);
+            $normalized['consentLinkUrl']   = esc_url_raw(isset($question['consentLinkUrl']) ? $question['consentLinkUrl'] : '');
+            $normalized['consentLinkLabel'] = sanitize_text_field(isset($question['consentLinkLabel']) ? $question['consentLinkLabel'] : '');
         }
 
         return $normalized;
