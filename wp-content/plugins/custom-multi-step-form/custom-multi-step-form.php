@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Custom Multi Step Form
  * Description: Configurable multi-step form block for many different use cases.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author: A.Pēda
@@ -13,57 +13,29 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class Custom_Multi_Step_Form {
+define('MSF_PLUGIN_FILE', __FILE__);
+define('MSF_PLUGIN_DIR', plugin_dir_path(MSF_PLUGIN_FILE));
+define('MSF_PLUGIN_URL', plugin_dir_url(MSF_PLUGIN_FILE));
+define('MSF_VERSION', '0.4.0');
 
-    const BLOCK_DESCRIPTION = 'A configurable multi-step form for many different needs.';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-mail.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-form-config.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-seeder.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-cpt.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-settings.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-admin.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-submit.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-block.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-plugin.php';
 
-    public function __construct() {
-        add_action('init', array($this, 'register_block'));
-    }
-
-    private function get_asset_version($relative_path) {
-        $asset_path = plugin_dir_path(__FILE__) . ltrim($relative_path, '/');
-
-        if (file_exists($asset_path)) {
-            return (string) filemtime($asset_path);
-        }
-
-        return '0.3.0';
-    }
-
-    public function register_block() {
-        if (!function_exists('register_block_type')) {
-            return;
-        }
-
-        wp_register_script(
-            'custom-msf-block-editor',
-            plugin_dir_url(__FILE__) . 'assets/js/multi-step-form-block.js',
-            array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n'),
-            $this->get_asset_version('assets/js/multi-step-form-block.js'),
-            true
-        );
-
-        register_block_type('custom-msf/form', array(
-            'api_version'     => 2,
-            'title'           => __('Multi Step Form', 'custom-multi-step-form'),
-            'description'     => __(self::BLOCK_DESCRIPTION, 'custom-multi-step-form'),
-            'category'        => 'widgets',
-            'icon'            => 'forms',
-            'keywords'        => array('multi-step-form', 'multi', 'step', 'form', 'custom'),
-            'editor_script'   => 'custom-msf-block-editor',
-            'render_callback' => array($this, 'render_block'),
-        ));
-    }
-
-    public function render_block() {
-        return '<div class="custom-multi-step-form"><p class="custom-multi-step-form__hello">Hello World</p></div>';
-    }
+function msf_plugin() {
+    return MSF_Plugin::instance();
 }
 
-new Custom_Multi_Step_Form();
+msf_plugin();
 
 register_activation_hook(__FILE__, function () {
+    msf_plugin()->activate();
     set_transient('custom_msf_just_activated', 1, MINUTE_IN_SECONDS * 5);
 });
 
@@ -79,6 +51,6 @@ add_action('admin_notices', function () {
     }
 
     echo '<div class="notice notice-success is-dismissible"><p>';
-    echo esc_html__('Custom Multi Step Form is active. In the editor, search for the block "Multi Step Form".', 'custom-multi-step-form');
+    echo esc_html__('Custom Multi Step Form is active. Create a form under Multi Step Forms, then add the block to a page.', 'custom-multi-step-form');
     echo '</p></div>';
 });

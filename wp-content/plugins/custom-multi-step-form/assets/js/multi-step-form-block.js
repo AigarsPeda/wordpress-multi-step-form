@@ -1,8 +1,17 @@
 (function (blocks, element, blockEditor, components, i18n) {
     var el = element.createElement;
+    var Fragment = element.Fragment;
     var useBlockProps = blockEditor.useBlockProps;
+    var InspectorControls = blockEditor.InspectorControls;
+    var PanelBody = components.PanelBody;
+    var SelectControl = components.SelectControl;
+    var ToggleControl = components.ToggleControl;
     var Placeholder = components.Placeholder;
     var __ = i18n.__;
+
+    function getEditorData() {
+        return window.msfBlockEditor || { forms: [], i18n: {} };
+    }
 
     var blockIcon = el(
         'svg',
@@ -20,6 +29,38 @@
         })
     );
 
+    function buildFormOptions(forms, i18nData) {
+        return [{ label: i18nData.selectForm || 'Select form', value: 0 }].concat(
+            (forms || []).map(function (form) {
+                return { label: form.title, value: form.id };
+            })
+        );
+    }
+
+    function FormPicker(props) {
+        var editorData = getEditorData();
+        var forms = editorData.forms || [];
+        var i18nData = editorData.i18n || {};
+        var formOptions = buildFormOptions(forms, i18nData);
+
+        if (!forms.length) {
+            return el('p', { style: { margin: '12px 0 0', color: '#646970' } }, i18nData.noForms || '');
+        }
+
+        return el(
+            'div',
+            { style: { marginTop: '16px', maxWidth: '320px' } },
+            el(SelectControl, {
+                label: i18nData.selectForm || __('Select form', 'custom-multi-step-form'),
+                value: props.formId || 0,
+                options: formOptions,
+                onChange: function (value) {
+                    props.onChange(parseInt(value, 10) || 0);
+                }
+            })
+        );
+    }
+
     blocks.registerBlockType('custom-msf/form', {
         apiVersion: 2,
         title: __('Multi Step Form', 'custom-multi-step-form'),
@@ -28,26 +69,82 @@
         category: 'widgets',
         keywords: [
             __('multi-step-form', 'custom-multi-step-form'),
-            __('multi', 'custom-multi-step-form'),
-            __('step', 'custom-multi-step-form'),
             __('form', 'custom-multi-step-form')
         ],
-        supports: {
-            html: false
+        attributes: {
+            formId: { type: 'number', default: 0 },
+            showTitle: { type: 'boolean', default: false }
         },
-        edit: function () {
+        edit: function (props) {
+            var attributes = props.attributes;
+            var setAttributes = props.setAttributes;
             var blockProps = useBlockProps({
-                className: 'custom-multi-step-form-editor'
+                className: 'msf-block-editor'
+            });
+            var editorData = getEditorData();
+            var selectedForm = (editorData.forms || []).find(function (f) {
+                return f.id === attributes.formId;
             });
 
             return el(
-                Placeholder,
-                Object.assign({}, blockProps, {
-                    icon: blockIcon,
-                    label: __('Multi Step Form', 'custom-multi-step-form'),
-                    instructions: __('A configurable multi-step form for many different needs. Step and field settings will be added here.', 'custom-multi-step-form')
-                }),
-                el('p', { style: { margin: 0, color: '#646970', fontSize: '13px' } }, __('Preview placeholder — Hello World on the published page for now.', 'custom-multi-step-form'))
+                Fragment,
+                {},
+                el(
+                    InspectorControls,
+                    {},
+                    el(
+                        PanelBody,
+                        { title: __('Form', 'custom-multi-step-form'), initialOpen: true },
+                        el(FormPicker, {
+                            formId: attributes.formId,
+                            onChange: function (formId) {
+                                setAttributes({ formId: formId });
+                            }
+                        }),
+                        el(ToggleControl, {
+                            label: editorData.i18n.showTitle || __('Show form title', 'custom-multi-step-form'),
+                            checked: attributes.showTitle,
+                            onChange: function (value) {
+                                setAttributes({ showTitle: value });
+                            }
+                        })
+                    )
+                ),
+                el(
+                    'div',
+                    blockProps,
+                    el(
+                        Placeholder,
+                        {
+                            icon: blockIcon,
+                            label: __('Multi Step Form', 'custom-multi-step-form'),
+                            instructions: attributes.formId && selectedForm
+                                ? (editorData.i18n.selected || __('Selected form:', 'custom-multi-step-form')) + ' ' + selectedForm.title
+                                : (editorData.i18n.formRequired || __('Choose a form below:', 'custom-multi-step-form'))
+                        },
+                        !attributes.formId
+                            ? el(FormPicker, {
+                                formId: attributes.formId,
+                                onChange: function (formId) {
+                                    setAttributes({ formId: formId });
+                                }
+                            })
+                            : el(
+                                'div',
+                                { style: { marginTop: '12px' } },
+                                el('p', { style: { margin: '0 0 12px', fontWeight: '600' } }, selectedForm ? selectedForm.title : ''),
+                                el(FormPicker, {
+                                    formId: attributes.formId,
+                                    onChange: function (formId) {
+                                        setAttributes({ formId: formId });
+                                    }
+                                })
+                            ),
+                        el('p', {
+                            style: { margin: '16px 0 0', fontSize: '12px', color: '#646970' }
+                        }, editorData.i18n.openSettings || '')
+                    )
+                )
             );
         },
         save: function () {

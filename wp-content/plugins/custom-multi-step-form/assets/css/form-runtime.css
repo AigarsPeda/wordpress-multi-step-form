@@ -1,0 +1,101 @@
+.msf-form {
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.msf-form__title {
+    margin: 0 0 1rem;
+    font-size: 1.5rem;
+}
+
+.msf-form__progress {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.msf-form__progress-bar {
+    height: 100%;
+    width: 0;
+    background: #2563eb;
+    transition: width 0.3s ease;
+}
+
+.msf-form__step-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.125rem;
+}
+
+.msf-form__label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.msf-form__input,
+.msf-form__field textarea {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.msf-form__choice {
+    display: block;
+    margin: 0.35rem 0;
+}
+
+.msf-form__actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.msf-form__btn {
+    appearance: none;
+    border: none;
+    border-radius: 6px;
+    padding: 0.625rem 1.25rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.msf-form__btn--primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.msf-form__btn--secondary {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.msf-form__error {
+    color: #b91c1c;
+    margin-top: 0.75rem;
+}
+
+.msf-form__success {
+    padding: 1rem;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 8px;
+}
+
+.msf-form__honeypot {
+    position: absolute;
+    left: -9999px;
+    height: 0;
+    overflow: hidden;
+}
+
+.msf-form-error {
+    padding: 0.75rem 1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
