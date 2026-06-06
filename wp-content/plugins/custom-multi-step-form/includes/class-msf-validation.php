@@ -43,35 +43,8 @@ class MSF_Validation {
             return 'phone';
         }
 
-        if (!empty($question['format']) && in_array($question['format'], array('email', 'phone'), true)) {
+        if ($type === 'text' && !empty($question['format']) && in_array($question['format'], array('email', 'phone'), true)) {
             return $question['format'];
-        }
-
-        if ($type !== 'text') {
-            return null;
-        }
-
-        $id    = strtolower((string) ($question['id'] ?? ''));
-        $label = strtolower((string) ($question['label'] ?? ''));
-
-        if (
-            strpos($id, 'phone') !== false
-            || strpos($id, 'tel') !== false
-            || strpos($label, 'tālruņ') !== false
-            || strpos($label, 'talrun') !== false
-            || strpos($label, 'phone') !== false
-        ) {
-            return 'phone';
-        }
-
-        if (
-            strpos($id, 'email') !== false
-            || strpos($id, 'epast') !== false
-            || strpos($label, 'e-past') !== false
-            || strpos($label, 'epast') !== false
-            || strpos($label, 'email') !== false
-        ) {
-            return 'email';
         }
 
         return null;

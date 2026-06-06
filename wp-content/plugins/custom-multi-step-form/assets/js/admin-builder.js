@@ -27,6 +27,21 @@
         return html;
     }
 
+    function formatChoices(selected) {
+        var formats = [
+            ['', msfAdmin.i18n.formatNone || 'None'],
+            ['email', msfAdmin.i18n.formatEmail || 'Email'],
+            ['phone', msfAdmin.i18n.formatPhone || 'Phone']
+        ];
+        var html = '';
+
+        formats.forEach(function (item) {
+            html += '<option value="' + item[0] + '"' + (selected === item[0] ? ' selected' : '') + '>' + item[1] + '</option>';
+        });
+
+        return html;
+    }
+
     function optionsToText(options) {
         if (!options || !options.length) {
             return '';
@@ -90,6 +105,8 @@
         var isSummary = stepType === 'summary';
         var isConsent = question.type === 'consent';
         var isFile = question.type === 'file';
+        var isText = (question.type || 'text') === 'text';
+        var textFormat = question.format || '';
         var hasNestedGroups = visibility.groups && visibility.groups.length;
         var consentDisplay = isConsent ? '' : ' style="display:none;"';
         var fileDisplay = isFile ? '' : ' style="display:none;"';
@@ -109,6 +126,7 @@
         html += '<div class="msf-step-question-fields"' + (isSummary ? ' style="display:none;"' : '') + '>';
         html += '<p><label>' + msfAdmin.i18n.questionLabel + '<br><input type="text" class="widefat msf-question-label" value="' + escapeAttr(question.label || '') + '"></label></p>';
         html += '<p><label>' + msfAdmin.i18n.questionType + '<br><select class="msf-question-type">' + optionTypeChoices(question.type || 'text') + '</select></label></p>';
+        html += '<p class="msf-format-wrap"' + (isText ? '' : ' style="display:none;"') + '><label>' + msfAdmin.i18n.textFormat + '<br><select class="msf-question-format">' + formatChoices(textFormat) + '</select></label></p>';
         html += '<p><label><input type="checkbox" class="msf-question-required"' + (question.required ? ' checked' : '') + '> ' + msfAdmin.i18n.required + '</label></p>';
         html += '<p class="msf-options-wrap"' + optionsDisplay + '><label>' + msfAdmin.i18n.options + '<br><textarea class="widefat msf-question-options" rows="4">' + escapeText(optionsToText(question.options)) + '</textarea></label></p>';
         html += '<div class="msf-consent-wrap"' + consentDisplay + '>';
@@ -322,6 +340,14 @@
                 };
             }
 
+            if (type === 'text') {
+                var format = $card.find('.msf-question-format').val();
+
+                if (format === 'email' || format === 'phone') {
+                    question.format = format;
+                }
+            }
+
             step.questions = [question];
             steps.push(step);
         });
@@ -341,6 +367,7 @@
             $card.find('.msf-options-wrap').toggle(type === 'radio' || type === 'checkbox');
             $card.find('.msf-consent-wrap').toggle(type === 'consent');
             $card.find('.msf-file-wrap').toggle(type === 'file');
+            $card.find('.msf-format-wrap').toggle(type === 'text');
         }
 
         if ($(this).hasClass('msf-step-type')) {

@@ -294,6 +294,14 @@ class MSF_Form_Config {
             $normalized['consentLinkLabel'] = sanitize_text_field(isset($question['consentLinkLabel']) ? $question['consentLinkLabel'] : '');
         }
 
+        if ($type === 'text') {
+            $format = isset($question['format']) ? sanitize_key($question['format']) : '';
+
+            if (in_array($format, array('email', 'phone'), true)) {
+                $normalized['format'] = $format;
+            }
+        }
+
         return $normalized;
     }
 

@@ -30,6 +30,7 @@ class MSF_I18n {
             'invalidEmail'        => __('Lūdzu, ievadiet derīgu e-pasta adresi.', 'custom-multi-step-form'),
             'invalidPhone'        => __('Lūdzu, ievadiet derīgu tālruņa numuru.', 'custom-multi-step-form'),
             'invalidDate'         => __('Lūdzu, ievadiet derīgu datumu.', 'custom-multi-step-form'),
+            'progressLabel'       => __('Formas progress', 'custom-multi-step-form'),
         );
 
         return apply_filters('msf_runtime_i18n', $strings);

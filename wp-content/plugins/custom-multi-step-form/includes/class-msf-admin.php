@@ -144,6 +144,10 @@ class MSF_Admin {
                 'consentLinkUrl' => __('Privacy policy URL', 'custom-multi-step-form'),
                 'consentLinkLabel' => __('Link label', 'custom-multi-step-form'),
                 'fileMaxSize'    => __('Max file size (MB)', 'custom-multi-step-form'),
+                'textFormat'     => __('Text validation', 'custom-multi-step-form'),
+                'formatNone'     => __('None', 'custom-multi-step-form'),
+                'formatEmail'    => __('Email', 'custom-multi-step-form'),
+                'formatPhone'    => __('Phone', 'custom-multi-step-form'),
                 'nestedGroupsNote' => __('This step has advanced nested visibility rules (preserved on save).', 'custom-multi-step-form'),
                 'types'          => array(
                     'text'     => __('Text', 'custom-multi-step-form'),

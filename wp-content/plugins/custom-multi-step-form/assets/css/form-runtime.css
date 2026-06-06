@@ -43,10 +43,19 @@
     font-size: 1.125rem;
 }
 
-.msf-form__label {
+.msf-form__label,
+.msf-form__fieldset legend.msf-form__label {
     display: block;
     font-weight: 600;
     margin-bottom: 0.5rem;
+    padding: 0;
+}
+
+.msf-form__fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
 }
 
 .msf-form__input,
@@ -89,9 +98,19 @@
     color: #111827;
 }
 
+.msf-form__btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
 .msf-form__error {
     color: var(--msf-color-error);
     margin-top: 0.75rem;
+}
+
+.msf-form__submit-error {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
 }
 
 .msf-form__success {

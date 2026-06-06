@@ -319,35 +319,8 @@
             return 'phone';
         }
 
-        if (question.format === 'email' || question.format === 'phone') {
+        if (question.type === 'text' && (question.format === 'email' || question.format === 'phone')) {
             return question.format;
-        }
-
-        if (question.type !== 'text') {
-            return null;
-        }
-
-        var id = String(question.id || '').toLowerCase();
-        var label = String(question.label || '').toLowerCase();
-
-        if (
-            id.indexOf('phone') !== -1
-            || id.indexOf('tel') !== -1
-            || label.indexOf('tālruņ') !== -1
-            || label.indexOf('talrun') !== -1
-            || label.indexOf('phone') !== -1
-        ) {
-            return 'phone';
-        }
-
-        if (
-            id.indexOf('email') !== -1
-            || id.indexOf('epast') !== -1
-            || label.indexOf('e-past') !== -1
-            || label.indexOf('epast') !== -1
-            || label.indexOf('email') !== -1
-        ) {
-            return 'email';
         }
 
         return null;
@@ -375,6 +348,7 @@
         this.answers = {};
         this.fileAnswers = {};
         this.datePickers = [];
+        this.isSubmitting = false;
         this.isPreview = root.getAttribute('data-msf-preview') === '1';
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
             || (window.msfRuntime && window.msfRuntime.i18n)
@@ -396,9 +370,48 @@
                 dateAfterThreeMonths: 'Pēc 3 mēnešiem',
                 invalidEmail: 'Lūdzu, ievadiet derīgu e-pasta adresi.',
                 invalidPhone: 'Lūdzu, ievadiet derīgu tālruņa numuru.',
-                invalidDate: 'Lūdzu, ievadiet derīgu datumu.'
+                invalidDate: 'Lūdzu, ievadiet derīgu datumu.',
+                progressLabel: 'Formas progress'
             };
     }
+
+    MSForm.prototype.fieldInputId = function (questionId, suffix) {
+        var id = 'msf-field-' + this.formId + '-' + questionId;
+
+        return suffix ? id + '-' + suffix : id;
+    };
+
+    MSForm.prototype.fieldErrorId = function (questionId) {
+        return 'msf-error-' + this.formId + '-' + questionId;
+    };
+
+    MSForm.prototype.getQuestionControl = function (question) {
+        if (!question || !this.body) {
+            return null;
+        }
+
+        if (question.type === 'checkbox') {
+            return this.body.querySelector('[name="' + question.id + '[]"]');
+        }
+
+        return this.body.querySelector('[name="' + question.id + '"]')
+            || document.getElementById(this.fieldInputId(question.id));
+    };
+
+    MSForm.prototype.clearFieldErrors = function () {
+        if (!this.body) {
+            return;
+        }
+
+        this.body.querySelectorAll('.msf-form__error').forEach(function (node) {
+            node.remove();
+        });
+
+        this.body.querySelectorAll('[aria-invalid="true"]').forEach(function (field) {
+            field.removeAttribute('aria-invalid');
+            field.removeAttribute('aria-describedby');
+        });
+    };
 
     MSForm.prototype.getTransitionMs = function () {
         var settings = this.config.settings || {};
@@ -457,6 +470,11 @@
         var index = steps.findIndex(function (step) { return step.id === this.currentStepId; }.bind(this));
         var percent = steps.length ? ((index + 1) / steps.length) * 100 : 0;
         this.progressBar.style.width = percent + '%';
+        this.progressWrap.setAttribute('role', 'progressbar');
+        this.progressWrap.setAttribute('aria-valuemin', '0');
+        this.progressWrap.setAttribute('aria-valuemax', '100');
+        this.progressWrap.setAttribute('aria-valuenow', String(Math.round(percent)));
+        this.progressWrap.setAttribute('aria-label', this.i18n.progressLabel || 'Formas progress');
     };
 
     MSForm.prototype.updatePriceBar = function () {
@@ -743,29 +761,62 @@
         this.updateProgress();
         this.updatePriceBar();
 
-        var panel = el('div', { className: 'msf-form__step msf-form__step--enter' });
+        var panel = el('div', {
+            className: 'msf-form__step msf-form__step--enter',
+            role: 'group',
+            'aria-live': 'polite'
+        });
 
         if (step.type === 'summary') {
             this.renderSummary(panel);
         } else {
             var question = step.questions[0];
+            var stepTitleId = step.title ? this.fieldInputId(step.id, 'title') : '';
 
             if (step.title) {
-                panel.appendChild(el('h3', { className: 'msf-form__step-title', text: step.title }));
+                panel.appendChild(el('h3', {
+                    className: 'msf-form__step-title',
+                    id: stepTitleId,
+                    text: step.title
+                }));
+                panel.setAttribute('aria-labelledby', stepTitleId);
             }
 
             if (step.description) {
                 panel.appendChild(el('p', { className: 'msf-form__step-description', text: step.description }));
             }
 
-            panel.appendChild(el('label', { className: 'msf-form__label', text: question.label }));
-
             if (question.description) {
                 panel.appendChild(el('p', { className: 'msf-form__question-description', text: question.description }));
             }
 
             var fieldWrap = this.renderField(question);
-            panel.appendChild(fieldWrap);
+            var useFieldset = question.type === 'radio' || question.type === 'checkbox' || question.type === 'consent';
+
+            if (useFieldset) {
+                var fieldset = el('fieldset', { className: 'msf-form__fieldset' });
+
+                if (question.type === 'consent') {
+                    fieldset.setAttribute('aria-label', question.consentText || question.label || '');
+                } else {
+                    fieldset.appendChild(el('legend', { className: 'msf-form__label', text: question.label }));
+                }
+
+                fieldset.appendChild(fieldWrap);
+                panel.appendChild(fieldset);
+            } else {
+                panel.appendChild(el('label', {
+                    className: 'msf-form__label',
+                    for: this.fieldInputId(question.id),
+                    text: question.label
+                }));
+                panel.appendChild(fieldWrap);
+            }
+
+            if (!step.title && question.label) {
+                panel.setAttribute('aria-label', question.label);
+            }
+
             activeFieldWrap = fieldWrap;
             activeQuestion = question;
 
@@ -803,6 +854,10 @@
         });
 
         nextBtn.addEventListener('click', function () {
+            if (self.isSubmitting) {
+                return;
+            }
+
             if (question && !self.validateCurrent(question)) {
                 return;
             }
@@ -812,7 +867,7 @@
             }
 
             if (isLast) {
-                self.submit();
+                self.submit(nextBtn);
                 return;
             }
 
@@ -871,11 +926,14 @@
     MSForm.prototype.renderField = function (question) {
         var wrap = el('div', { className: 'msf-form__field' });
         var value = this.answers[question.id];
+        var inputId = this.fieldInputId(question.id);
+        var self = this;
 
         switch (question.type) {
             case 'textarea':
                 wrap.appendChild(el('textarea', {
                     className: 'msf-form__input',
+                    id: inputId,
                     name: question.id,
                     rows: '4'
                 }));
@@ -884,6 +942,7 @@
             case 'number':
                 wrap.appendChild(el('input', {
                     className: 'msf-form__input',
+                    id: inputId,
                     type: 'number',
                     name: question.id
                 }));
@@ -894,6 +953,7 @@
             case 'email':
                 wrap.appendChild(el('input', {
                     className: 'msf-form__input',
+                    id: inputId,
                     type: 'email',
                     name: question.id,
                     inputmode: 'email',
@@ -904,6 +964,7 @@
             case 'tel':
                 wrap.appendChild(el('input', {
                     className: 'msf-form__input',
+                    id: inputId,
                     type: 'tel',
                     name: question.id,
                     inputmode: 'tel',
@@ -913,9 +974,10 @@
                 break;
             case 'radio':
                 (question.options || []).forEach(function (option) {
+                    var optionInputId = self.fieldInputId(question.id, option.value);
                     var label = el('label', {
                         className: 'msf-form__choice',
-                        html: '<input type="radio" name="' + question.id + '" value="' + option.value + '"> ' + option.label
+                        html: '<input type="radio" id="' + optionInputId + '" name="' + question.id + '" value="' + option.value + '"> ' + option.label
                     });
                     if (value === option.value) {
                         label.querySelector('input').checked = true;
@@ -925,9 +987,10 @@
                 break;
             case 'checkbox':
                 (question.options || []).forEach(function (option) {
+                    var optionInputId = self.fieldInputId(question.id, option.value);
                     var label = el('label', {
                         className: 'msf-form__choice',
-                        html: '<input type="checkbox" name="' + question.id + '[]" value="' + option.value + '"> ' + option.label
+                        html: '<input type="checkbox" id="' + optionInputId + '" name="' + question.id + '[]" value="' + option.value + '"> ' + option.label
                     });
                     if (Array.isArray(value) && value.indexOf(option.value) !== -1) {
                         label.querySelector('input').checked = true;
@@ -956,6 +1019,7 @@
                 var pickerWrap = el('div', { className: 'msf-form__date-picker-wrap' });
                 var dateInput = el('input', {
                     className: 'msf-form__input msf-form__date-input',
+                    id: inputId,
                     type: 'text',
                     name: question.id,
                     autocomplete: 'off',
@@ -971,6 +1035,7 @@
                 var maxMb = (question.validation && question.validation.maxSizeMb) ? question.validation.maxSizeMb : 5;
                 var fileInput = el('input', {
                     className: 'msf-form__input',
+                    id: inputId,
                     type: 'file',
                     name: question.id,
                     accept: '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx'
@@ -994,7 +1059,7 @@
                 }
                 var consentLabel = el('label', {
                     className: 'msf-form__choice msf-form__consent',
-                    html: '<input type="checkbox" name="' + question.id + '" value="1"> ' + consentHtml
+                    html: '<input type="checkbox" id="' + inputId + '" name="' + question.id + '" value="1"> ' + consentHtml
                 });
                 if (value === '1' || value === 1 || value === true) {
                     consentLabel.querySelector('input').checked = true;
@@ -1006,6 +1071,7 @@
                 var inputType = 'text';
                 var inputAttrs = {
                     className: 'msf-form__input',
+                    id: inputId,
                     type: inputType,
                     name: question.id
                 };
@@ -1029,26 +1095,56 @@
         return wrap;
     };
 
-    MSForm.prototype.showFieldError = function (message) {
+    MSForm.prototype.showFieldError = function (message, question) {
         var step = this.body.querySelector('.msf-form__step');
+        var errorId = question ? this.fieldErrorId(question.id) : '';
+        var errorEl = el('p', {
+            className: 'msf-form__error',
+            id: errorId,
+            role: 'alert',
+            tabindex: '-1',
+            text: message
+        });
+        var focusTarget = null;
 
         if (step) {
-            step.appendChild(el('p', { className: 'msf-form__error', text: message }));
+            var actions = step.querySelector('.msf-form__actions');
+
+            if (actions) {
+                step.insertBefore(errorEl, actions);
+            } else {
+                step.appendChild(errorEl);
+            }
         }
+
+        if (question) {
+            focusTarget = this.getQuestionControl(question);
+
+            if (focusTarget) {
+                focusTarget.setAttribute('aria-invalid', 'true');
+
+                if (errorId) {
+                    focusTarget.setAttribute('aria-describedby', errorId);
+                }
+            }
+        }
+
+        if (!focusTarget) {
+            focusTarget = errorEl;
+        }
+
+        focusTarget.focus();
     };
 
     MSForm.prototype.validateCurrent = function (question) {
         var requiredMessage = this.i18n.required || 'Šis lauks ir obligāts.';
-        var existing = this.body.querySelector('.msf-form__error');
 
-        if (existing) {
-            existing.remove();
-        }
+        this.clearFieldErrors();
 
         var contactFormat = getContactFormat(question);
 
         if (contactFormat) {
-            var contactField = this.body.querySelector('[name="' + question.id + '"]');
+            var contactField = this.getQuestionControl(question);
             var contactValue = contactField ? String(contactField.value || '').trim() : '';
 
             if (!contactValue) {
@@ -1056,17 +1152,17 @@
                     return true;
                 }
 
-                this.showFieldError(requiredMessage);
+                this.showFieldError(requiredMessage, question);
                 return false;
             }
 
             if (contactFormat === 'email' && !isValidEmail(contactValue)) {
-                this.showFieldError(this.i18n.invalidEmail || 'Lūdzu, ievadiet derīgu e-pasta adresi.');
+                this.showFieldError(this.i18n.invalidEmail || 'Lūdzu, ievadiet derīgu e-pasta adresi.', question);
                 return false;
             }
 
             if (contactFormat === 'phone' && !isValidPhone(contactValue)) {
-                this.showFieldError(this.i18n.invalidPhone || 'Lūdzu, ievadiet derīgu tālruņa numuru.');
+                this.showFieldError(this.i18n.invalidPhone || 'Lūdzu, ievadiet derīgu tālruņa numuru.', question);
                 return false;
             }
 
@@ -1074,7 +1170,7 @@
         }
 
         if (question.type === 'date') {
-            var dateField = this.body.querySelector('[name="' + question.id + '"]');
+            var dateField = this.getQuestionControl(question);
             var dateValue = dateField ? String(dateField.value || '').trim() : '';
 
             if (!dateValue) {
@@ -1082,12 +1178,12 @@
                     return true;
                 }
 
-                this.showFieldError(requiredMessage);
+                this.showFieldError(requiredMessage, question);
                 return false;
             }
 
             if (!isValidIsoDate(dateValue)) {
-                this.showFieldError(this.i18n.invalidDate || 'Lūdzu, ievadiet derīgu datumu.');
+                this.showFieldError(this.i18n.invalidDate || 'Lūdzu, ievadiet derīgu datumu.', question);
                 return false;
             }
 
@@ -1110,12 +1206,12 @@
             var fileField = this.body.querySelector('[name="' + question.id + '"]');
             valid = !!(this.fileAnswers[question.id] || (fileField && fileField.files && fileField.files[0]));
         } else {
-            var field = this.body.querySelector('[name="' + question.id + '"]');
+            var field = this.getQuestionControl(question);
             valid = field ? String(field.value || '').trim() !== '' : false;
         }
 
         if (!valid) {
-            this.showFieldError(requiredMessage);
+            this.showFieldError(requiredMessage, question);
         }
 
         return valid;
@@ -1155,17 +1251,76 @@
         this.answers[question.id] = field ? field.value : '';
     };
 
-    MSForm.prototype.submit = function () {
+    MSForm.prototype.setSubmitting = function (isSubmitting, primaryBtn, originalText) {
+        this.isSubmitting = isSubmitting;
+
+        if (!primaryBtn) {
+            return;
+        }
+
+        primaryBtn.disabled = isSubmitting;
+
+        if (isSubmitting) {
+            primaryBtn.setAttribute('aria-busy', 'true');
+            primaryBtn.textContent = this.i18n.submitting || 'Nosūta…';
+            return;
+        }
+
+        primaryBtn.removeAttribute('aria-busy');
+        primaryBtn.textContent = originalText || primaryBtn.textContent;
+    };
+
+    MSForm.prototype.showSubmitError = function (message) {
+        var step = this.body.querySelector('.msf-form__step');
+        var existing = this.body.querySelector('.msf-form__submit-error');
+
+        if (existing) {
+            existing.remove();
+        }
+
+        var errorEl = el('p', {
+            className: 'msf-form__error msf-form__submit-error',
+            role: 'alert',
+            tabindex: '-1',
+            text: message
+        });
+
+        if (step) {
+            var actions = step.querySelector('.msf-form__actions');
+
+            if (actions) {
+                step.insertBefore(errorEl, actions);
+            } else {
+                step.appendChild(errorEl);
+            }
+        }
+
+        errorEl.focus();
+    };
+
+    MSForm.prototype.submit = function (triggerBtn) {
         var self = this;
         var fallbackError = this.i18n.error || 'Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.';
         var fallbackSuccess = this.successMessage || 'Paldies! Jūsu pieteikums ir saņemts.';
+        var primaryBtn = triggerBtn || this.body.querySelector('.msf-form__btn--primary');
+        var originalText = primaryBtn ? primaryBtn.textContent : '';
 
         if (this.isPreview) {
             this.body.innerHTML = '<div class="msf-form__success"><p>' + (this.i18n.previewSubmit || 'Priekšskatījums — nosūtīšana atspējota.') + '</p></div>';
             return;
         }
 
-        this.body.innerHTML = '<p class="msf-form__loading">' + (this.i18n.submitting || 'Nosūta…') + '</p>';
+        if (this.isSubmitting) {
+            return;
+        }
+
+        var existingSubmitError = this.body.querySelector('.msf-form__submit-error');
+
+        if (existingSubmitError) {
+            existingSubmitError.remove();
+        }
+
+        this.setSubmitting(true, primaryBtn, originalText);
 
         var data = new FormData();
         data.append('action', 'msf_submit_form');
@@ -1229,7 +1384,8 @@
                     message = fallbackError;
                 }
 
-                self.body.innerHTML = '<p class="msf-form__error">' + message + '</p>';
+                self.setSubmitting(false, primaryBtn, originalText);
+                self.showSubmitError(message);
             });
     };
 
