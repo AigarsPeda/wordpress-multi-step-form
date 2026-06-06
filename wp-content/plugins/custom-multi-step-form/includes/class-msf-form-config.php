@@ -24,6 +24,7 @@ class MSF_Form_Config {
                 'summaryTitle'         => 'Kopsavilkums',
                 'showProgressBar'      => true,
                 'stepTransitionMs'     => 400,
+                'customCss'            => '',
             ),
             'pricing' => array(
                 'enabled'            => false,
@@ -82,6 +83,9 @@ class MSF_Form_Config {
             $display_on = 'summary';
         }
         $config['pricing']['displayOn'] = $display_on;
+        $config['settings']['customCss'] = self::sanitize_custom_css(
+            isset($config['settings']['customCss']) ? $config['settings']['customCss'] : ''
+        );
 
         $config['schemaVersion'] = 3;
         $config['steps']         = self::normalize_steps(
@@ -396,5 +400,39 @@ class MSF_Form_Config {
             'orderby'        => 'title',
             'order'          => 'ASC',
         ));
+    }
+
+    public static function sanitize_custom_css($css) {
+        if (!is_string($css)) {
+            return '';
+        }
+
+        $css = wp_unslash($css);
+        $css = wp_strip_all_tags($css);
+        $css = preg_replace('/@import\b[^;]+;?/i', '', $css);
+        $css = preg_replace('/javascript\s*:/i', '', $css);
+        $css = preg_replace('/expression\s*\(/i', '', $css);
+
+        return trim($css);
+    }
+
+    /**
+     * @return string Style tag HTML or empty string.
+     */
+    public static function render_custom_css_tag($form_id, $css) {
+        $form_id = absint($form_id);
+        $css     = self::sanitize_custom_css($css);
+
+        if ($css === '' || !$form_id) {
+            return '';
+        }
+
+        $css = apply_filters('msf_form_custom_css', $css, $form_id);
+
+        return sprintf(
+            '<style id="msf-form-custom-css-%1$s">%2$s</style>',
+            esc_attr((string) $form_id),
+            $css // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- sanitized CSS for trusted editors
+        );
     }
 }

@@ -37,6 +37,12 @@
     width: 220px;
 }
 
+.msf-custom-css-field {
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 #msf-admin-preview.msf-form {
     max-width: 100%;
     margin: 0;

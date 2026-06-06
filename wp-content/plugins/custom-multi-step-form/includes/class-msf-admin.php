@@ -264,6 +264,24 @@ class MSF_Admin {
         <p class="description">
             <?php esc_html_e('Option price effects are set per step in the builder (value|Label|+amount|guest). See the sample form Banketu piedāvājums for a full example.', 'custom-multi-step-form'); ?>
         </p>
+
+        <h3><?php esc_html_e('Theme / custom CSS', 'custom-multi-step-form'); ?></h3>
+        <table class="form-table msf-form-settings-table">
+            <tr>
+                <th><label for="msf_custom_css"><?php esc_html_e('Custom CSS', 'custom-multi-step-form'); ?></label></th>
+                <td>
+                    <textarea class="large-text code msf-custom-css-field" rows="10" id="msf_custom_css" name="msf_custom_css" spellcheck="false"><?php echo esc_textarea($settings['customCss']); ?></textarea>
+                    <p class="description">
+                        <?php esc_html_e('Optional CSS for this form only. Scope rules to', 'custom-multi-step-form'); ?>
+                        <code>#msf-form-<?php echo esc_html($post->ID); ?></code>
+                        <?php esc_html_e('or .msf-form. Variables: --msf-color-primary, --msf-radius, --msf-max-width.', 'custom-multi-step-form'); ?>
+                    </p>
+                    <p class="description">
+                        <code>.msf-form { --msf-color-primary: #8b4513; --msf-max-width: 720px; }</code>
+                    </p>
+                </td>
+            </tr>
+        </table>
         <?php
     }
 
@@ -308,6 +326,9 @@ class MSF_Admin {
         }
 
         $runtime_i18n = MSF_I18n::runtime_strings();
+        $full_config  = MSF_Form_Config::get($post->ID);
+        $custom_css   = $full_config ? $full_config['settings']['customCss'] : '';
+        echo MSF_Form_Config::render_custom_css_tag($post->ID, $custom_css); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         ?>
         <p class="description"><?php esc_html_e('Interactive preview (submissions disabled).', 'custom-multi-step-form'); ?></p>
         <div
@@ -399,6 +420,9 @@ class MSF_Admin {
         $existing['settings']['customerEmailBody']    = isset($_POST['msf_customer_body']) ? sanitize_textarea_field(wp_unslash($_POST['msf_customer_body'])) : '';
         $existing['settings']['submitLabel']          = isset($_POST['msf_submit_label']) ? sanitize_text_field(wp_unslash($_POST['msf_submit_label'])) : '';
         $existing['settings']['stepTransitionMs']     = isset($_POST['msf_step_transition_ms']) ? absint($_POST['msf_step_transition_ms']) : 400;
+        $existing['settings']['customCss']          = isset($_POST['msf_custom_css'])
+            ? MSF_Form_Config::sanitize_custom_css(wp_unslash($_POST['msf_custom_css']))
+            : '';
 
         $existing['pricing']['enabled']            = !empty($_POST['msf_pricing_enabled']);
         $existing['pricing']['baseAmount']         = isset($_POST['msf_pricing_base']) ? floatval($_POST['msf_pricing_base']) : 0;

@@ -198,6 +198,7 @@
             $('#msf_customer_body').val(config.settings.customerEmailBody || '');
             $('#msf_submit_label').val(config.settings.submitLabel || '');
             $('#msf_step_transition_ms').val(config.settings.stepTransitionMs || 400);
+            $('#msf_custom_css').val(config.settings.customCss || '');
         }
 
         if (config.pricing) {
