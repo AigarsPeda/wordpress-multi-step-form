@@ -296,6 +296,7 @@
         this.history = [];
         this.answers = {};
         this.fileAnswers = {};
+        this.datePickers = [];
         this.isPreview = root.getAttribute('data-msf-preview') === '1';
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
             || (window.msfRuntime && window.msfRuntime.i18n)
@@ -310,7 +311,11 @@
                 consentAccepted: 'Piekrīts',
                 fileHint: 'Maks. %s MB (JPG, PNG, PDF, DOC)',
                 previewSubmit: 'Priekšskatījums — saglabājiet formu un skatiet lapā, lai nosūtītu.',
-                loading: 'Ielādē formu…'
+                loading: 'Ielādē formu…',
+                datePlaceholder: 'Izvēlieties datumu',
+                dateAfterWeek: 'Pēc nedēļas',
+                dateAfterMonth: 'Pēc mēneša',
+                dateAfterThreeMonths: 'Pēc 3 mēnešiem'
             };
     }
 
@@ -541,17 +546,116 @@
         }
     };
 
+    MSForm.prototype.destroyDatePickers = function () {
+        if (!this.datePickers || !this.datePickers.length) {
+            this.datePickers = [];
+            return;
+        }
+
+        this.datePickers.forEach(function (picker) {
+            if (picker && typeof picker.destroy === 'function') {
+                picker.destroy();
+            }
+        });
+        this.datePickers = [];
+    };
+
+    MSForm.prototype.formatDateValue = function (date) {
+        var year = date.getFullYear();
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    };
+
+    MSForm.prototype.addDays = function (base, days) {
+        var date = new Date(base.getTime());
+        date.setDate(date.getDate() + days);
+        return date;
+    };
+
+    MSForm.prototype.addMonths = function (base, months) {
+        var date = new Date(base.getTime());
+        date.setMonth(date.getMonth() + months);
+        return date;
+    };
+
+    MSForm.prototype.initDateField = function (fieldWrap, question) {
+        var self = this;
+        var input = fieldWrap.querySelector('.msf-form__date-input');
+
+        if (!input) {
+            return;
+        }
+
+        var shortcuts = [
+            { key: 'week', getDate: function () { return self.addDays(new Date(), 7); } },
+            { key: 'month', getDate: function () { return self.addMonths(new Date(), 1); } },
+            { key: 'quarter', getDate: function () { return self.addMonths(new Date(), 3); } }
+        ];
+
+        function applyDate(date) {
+            var value = self.formatDateValue(date);
+            self.answers[question.id] = value;
+
+            if (input._flatpickr) {
+                input._flatpickr.setDate(date, true);
+            } else {
+                input.value = value;
+            }
+
+            self.updatePriceBar();
+        }
+
+        fieldWrap.querySelectorAll('[data-msf-date-shortcut]').forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                var key = button.getAttribute('data-msf-date-shortcut');
+                var shortcut = shortcuts.find(function (item) { return item.key === key; });
+
+                if (shortcut) {
+                    applyDate(shortcut.getDate());
+                }
+            });
+        });
+
+        if (typeof window.flatpickr !== 'function') {
+            input.type = 'date';
+            input.min = self.formatDateValue(new Date());
+            return;
+        }
+
+        var locale = (window.flatpickr.l10ns && window.flatpickr.l10ns.lv) ? window.flatpickr.l10ns.lv : undefined;
+        var picker = window.flatpickr(input, {
+            dateFormat: 'Y-m-d',
+            locale: locale,
+            minDate: 'today',
+            allowInput: true,
+            defaultDate: input.value || null,
+            onChange: function (selectedDates, dateStr) {
+                if (dateStr) {
+                    self.answers[question.id] = dateStr;
+                    self.updatePriceBar();
+                }
+            }
+        });
+
+        this.datePickers.push(picker);
+    };
+
     MSForm.prototype.renderStep = function () {
         var step = this.getCurrentStep();
         var settings = this.config.settings || {};
         var self = this;
         var transitionMs = this.getTransitionMs();
+        var activeFieldWrap = null;
+        var activeQuestion = null;
 
         if (!step) {
             this.body.innerHTML = '';
             return;
         }
 
+        this.destroyDatePickers();
         this.body.innerHTML = '';
         this.updateProgress();
         this.updatePriceBar();
@@ -579,9 +683,10 @@
 
             var fieldWrap = this.renderField(question);
             panel.appendChild(fieldWrap);
+            activeFieldWrap = fieldWrap;
+            activeQuestion = question;
 
             if (this.config.pricing && this.config.pricing.enabled) {
-                var self = this;
                 fieldWrap.addEventListener('input', function () {
                     self.updatePriceBar();
                 });
@@ -634,6 +739,10 @@
         actions.appendChild(nextBtn);
         panel.appendChild(actions);
         this.body.appendChild(panel);
+
+        if (activeQuestion && activeQuestion.type === 'date' && activeFieldWrap) {
+            this.initDateField(activeFieldWrap, activeQuestion);
+        }
 
         window.setTimeout(function () {
             panel.classList.remove('msf-form__step--enter');
@@ -732,12 +841,36 @@
                 });
                 break;
             case 'date':
-                wrap.appendChild(el('input', {
-                    className: 'msf-form__input',
-                    type: 'date',
-                    name: question.id
-                }));
-                wrap.querySelector('input').value = value || '';
+                var dateField = el('div', { className: 'msf-form__date-field' });
+                var shortcutsWrap = el('div', { className: 'msf-form__date-shortcuts' });
+                var shortcutLabels = [
+                    ['week', this.i18n.dateAfterWeek || 'Pēc nedēļas'],
+                    ['month', this.i18n.dateAfterMonth || 'Pēc mēneša'],
+                    ['quarter', this.i18n.dateAfterThreeMonths || 'Pēc 3 mēnešiem']
+                ];
+
+                shortcutLabels.forEach(function (item) {
+                    shortcutsWrap.appendChild(el('button', {
+                        type: 'button',
+                        className: 'msf-form__btn msf-form__btn--secondary msf-form__date-shortcut',
+                        'data-msf-date-shortcut': item[0],
+                        text: item[1]
+                    }));
+                });
+
+                var pickerWrap = el('div', { className: 'msf-form__date-picker-wrap' });
+                var dateInput = el('input', {
+                    className: 'msf-form__input msf-form__date-input',
+                    type: 'text',
+                    name: question.id,
+                    autocomplete: 'off',
+                    placeholder: this.i18n.datePlaceholder || 'Izvēlieties datumu'
+                });
+                dateInput.value = value || '';
+                pickerWrap.appendChild(dateInput);
+                dateField.appendChild(shortcutsWrap);
+                dateField.appendChild(pickerWrap);
+                wrap.appendChild(dateField);
                 break;
             case 'file':
                 var maxMb = (question.validation && question.validation.maxSizeMb) ? question.validation.maxSizeMb : 5;
@@ -808,6 +941,9 @@
         } else if (question.type === 'file') {
             var fileField = this.body.querySelector('[name="' + question.id + '"]');
             valid = !!(this.fileAnswers[question.id] || (fileField && fileField.files && fileField.files[0]));
+        } else if (question.type === 'date') {
+            var dateField = this.body.querySelector('[name="' + question.id + '"]');
+            valid = dateField ? String(dateField.value || '').trim() !== '' : false;
         } else {
             var field = this.body.querySelector('[name="' + question.id + '"]');
             valid = field ? String(field.value || '').trim() !== '' : false;

@@ -22,7 +22,11 @@ class MSF_I18n {
             'consentAccepted' => __('Piekrīts', 'custom-multi-step-form'),
             'fileHint'        => __('Maks. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
             'previewSubmit'   => __('Priekšskatījums — saglabājiet formu un skatiet lapā, lai nosūtītu.', 'custom-multi-step-form'),
-            'loading'         => __('Ielādē formu…', 'custom-multi-step-form'),
+            'loading'             => __('Ielādē formu…', 'custom-multi-step-form'),
+            'datePlaceholder'     => __('Izvēlieties datumu', 'custom-multi-step-form'),
+            'dateAfterWeek'       => __('Pēc nedēļas', 'custom-multi-step-form'),
+            'dateAfterMonth'      => __('Pēc mēneša', 'custom-multi-step-form'),
+            'dateAfterThreeMonths'=> __('Pēc 3 mēnešiem', 'custom-multi-step-form'),
         );
 
         return apply_filters('msf_runtime_i18n', $strings);

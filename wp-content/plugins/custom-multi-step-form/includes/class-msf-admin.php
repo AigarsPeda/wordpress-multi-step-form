@@ -90,6 +90,8 @@ class MSF_Admin {
             true
         );
 
+        msf_plugin()->enqueue_flatpickr_assets();
+
         wp_enqueue_style(
             'msf-form-runtime',
             MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
@@ -100,7 +102,7 @@ class MSF_Admin {
         wp_enqueue_script(
             'msf-form-runtime',
             MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
-            array(),
+            array('msf-flatpickr-lv'),
             msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
             true
         );

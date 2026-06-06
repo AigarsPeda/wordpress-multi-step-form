@@ -1,0 +1,52 @@
+.msf-form .flatpickr-calendar {
+    border-radius: var(--msf-radius, 6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    font-family: var(--msf-font-family, inherit);
+}
+
+.msf-form .flatpickr-day.selected,
+.msf-form .flatpickr-day.startRange,
+.msf-form .flatpickr-day.endRange,
+.msf-form .flatpickr-day.selected.inRange,
+.msf-form .flatpickr-day.startRange.inRange,
+.msf-form .flatpickr-day.endRange.inRange {
+    background: var(--msf-color-primary, #2563eb);
+    border-color: var(--msf-color-primary, #2563eb);
+}
+
+.msf-form .flatpickr-day.today {
+    border-color: var(--msf-color-primary, #2563eb);
+}
+
+.msf-form .flatpickr-day:hover,
+.msf-form .flatpickr-day:focus {
+    background: var(--msf-color-muted-bg, #f3f4f6);
+}
+
+.msf-form .flatpickr-months .flatpickr-month,
+.msf-form .flatpickr-current-month .flatpickr-monthDropdown-months,
+.msf-form .flatpickr-weekdays,
+.msf-form span.flatpickr-weekday {
+    background: #fff;
+}
+
+.msf-form__date-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.msf-form__date-shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.msf-form__date-shortcut {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.msf-form__date-picker-wrap {
+    position: relative;
+}

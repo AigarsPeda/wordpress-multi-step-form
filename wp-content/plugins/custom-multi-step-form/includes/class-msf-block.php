@@ -17,6 +17,8 @@ class MSF_Block {
     }
 
     public function enqueue_block_editor_assets() {
+        msf_plugin()->enqueue_flatpickr_assets();
+
         wp_enqueue_style(
             'msf-form-runtime',
             MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
@@ -27,7 +29,7 @@ class MSF_Block {
         wp_enqueue_script(
             'msf-form-runtime',
             MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
-            array(),
+            array('msf-flatpickr-lv'),
             msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
             true
         );
@@ -74,6 +76,8 @@ class MSF_Block {
     }
 
     public function register_front_assets() {
+        msf_plugin()->register_flatpickr_assets();
+
         wp_register_style(
             'msf-form-runtime',
             MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
@@ -84,7 +88,7 @@ class MSF_Block {
         wp_register_script(
             'msf-form-runtime',
             MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
-            array(),
+            array('msf-flatpickr-lv'),
             msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
             true
         );
@@ -96,6 +100,8 @@ class MSF_Block {
         }
 
         if (!wp_script_is('msf-form-runtime', 'registered')) {
+            msf_plugin()->register_flatpickr_assets();
+
             wp_register_style(
                 'msf-form-runtime',
                 MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
@@ -106,7 +112,7 @@ class MSF_Block {
             wp_register_script(
                 'msf-form-runtime',
                 MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
-                array(),
+                array('msf-flatpickr-lv'),
                 msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
                 true
             );
@@ -175,6 +181,7 @@ class MSF_Block {
             return '';
         }
 
+        msf_plugin()->enqueue_flatpickr_assets();
         wp_enqueue_style('msf-form-runtime');
         wp_enqueue_script('msf-form-runtime');
 

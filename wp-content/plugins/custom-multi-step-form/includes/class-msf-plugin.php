@@ -58,4 +58,47 @@ class MSF_Plugin {
 
         return MSF_VERSION;
     }
+
+    public function register_flatpickr_assets() {
+        if (wp_script_is('msf-flatpickr', 'registered')) {
+            return;
+        }
+
+        wp_register_style(
+            'msf-flatpickr',
+            MSF_PLUGIN_URL . 'assets/vendor/flatpickr/flatpickr.min.css',
+            array(),
+            $this->get_asset_version('assets/vendor/flatpickr/flatpickr.min.css')
+        );
+
+        wp_register_style(
+            'msf-flatpickr-theme',
+            MSF_PLUGIN_URL . 'assets/css/flatpickr-msf.css',
+            array('msf-flatpickr'),
+            $this->get_asset_version('assets/css/flatpickr-msf.css')
+        );
+
+        wp_register_script(
+            'msf-flatpickr',
+            MSF_PLUGIN_URL . 'assets/vendor/flatpickr/flatpickr.min.js',
+            array(),
+            $this->get_asset_version('assets/vendor/flatpickr/flatpickr.min.js'),
+            true
+        );
+
+        wp_register_script(
+            'msf-flatpickr-lv',
+            MSF_PLUGIN_URL . 'assets/vendor/flatpickr/lv.js',
+            array('msf-flatpickr'),
+            $this->get_asset_version('assets/vendor/flatpickr/lv.js'),
+            true
+        );
+    }
+
+    public function enqueue_flatpickr_assets() {
+        $this->register_flatpickr_assets();
+        wp_enqueue_style('msf-flatpickr');
+        wp_enqueue_style('msf-flatpickr-theme');
+        wp_enqueue_script('msf-flatpickr-lv');
+    }
 }
