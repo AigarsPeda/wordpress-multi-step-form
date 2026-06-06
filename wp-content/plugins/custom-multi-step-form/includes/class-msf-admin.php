@@ -31,6 +31,24 @@ class MSF_Admin {
             'normal',
             'default'
         );
+
+        add_meta_box(
+            'msf_form_import_export',
+            __('Import / Export', 'custom-multi-step-form'),
+            array($this, 'render_import_export_meta_box'),
+            'msf_form',
+            'side',
+            'default'
+        );
+
+        add_meta_box(
+            'msf_form_preview',
+            __('Live preview', 'custom-multi-step-form'),
+            array($this, 'render_preview_meta_box'),
+            'msf_form',
+            'side',
+            'low'
+        );
     }
 
     public function add_entry_meta_boxes() {
@@ -62,17 +80,47 @@ class MSF_Admin {
             msf_plugin()->get_asset_version('assets/css/admin.css')
         );
 
+        wp_enqueue_script('jquery-ui-sortable');
+
         wp_enqueue_script(
             'msf-admin-builder',
             MSF_PLUGIN_URL . 'assets/js/admin-builder.js',
-            array('jquery'),
+            array('jquery', 'jquery-ui-sortable'),
             msf_plugin()->get_asset_version('assets/js/admin-builder.js'),
             true
         );
 
+        wp_enqueue_style(
+            'msf-form-runtime',
+            MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
+            array(),
+            msf_plugin()->get_asset_version('assets/css/form-runtime.css')
+        );
+
+        wp_enqueue_script(
+            'msf-form-runtime',
+            MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
+            array(),
+            msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
+            true
+        );
+
         wp_localize_script('msf-admin-builder', 'msfAdmin', array(
+            'formId'        => $post->ID,
             'questionTypes' => MSF_Form_Config::QUESTION_TYPES,
+            'exportUrl'     => wp_nonce_url(
+                admin_url('admin.php?action=msf_export_form&post=' . $post->ID),
+                'msf_export_' . $post->ID
+            ),
+            'previewConfig' => MSF_Form_Config::get_public($post->ID),
             'i18n'          => array(
+                'dragHandle'     => __('Drag to reorder', 'custom-multi-step-form'),
+                'exportJson'     => __('Download JSON', 'custom-multi-step-form'),
+                'importJson'     => __('Import JSON', 'custom-multi-step-form'),
+                'importHelp'     => __('Paste exported JSON below, then click Import. Save the form to persist changes.', 'custom-multi-step-form'),
+                'importSuccess'  => __('Configuration imported. Review the steps and click Update to save.', 'custom-multi-step-form'),
+                'importError'    => __('Invalid JSON. Expected an object with a steps array.', 'custom-multi-step-form'),
+                'previewNote'    => __('Preview only — submissions are disabled here.', 'custom-multi-step-form'),
                 'step'           => __('Step', 'custom-multi-step-form'),
                 'stepTitle'      => __('Step title (optional)', 'custom-multi-step-form'),
                 'questionLabel'  => __('Question', 'custom-multi-step-form'),
@@ -221,8 +269,8 @@ class MSF_Admin {
 
     public function render_steps_meta_box($post) {
         $config = MSF_Form_Config::get($post->ID);
-        $json   = wp_json_encode($config['steps'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         ?>
+        <p class="description"><?php esc_html_e('Drag steps by the handle to reorder.', 'custom-multi-step-form'); ?></p>
         <div id="msf-steps-builder" class="msf-steps-builder"></div>
         <p>
             <button type="button" class="button button-secondary" id="msf-add-step">
@@ -230,6 +278,63 @@ class MSF_Admin {
             </button>
         </p>
         <input type="hidden" id="msf_steps_json" name="msf_steps_json" value="<?php echo esc_attr(wp_json_encode($config['steps'], JSON_UNESCAPED_UNICODE)); ?>">
+        <?php
+    }
+
+    public function render_import_export_meta_box($post) {
+        ?>
+        <p>
+            <a class="button button-secondary" id="msf-export-config" href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?action=msf_export_form&post=' . $post->ID), 'msf_export_' . $post->ID)); ?>">
+                <?php esc_html_e('Download JSON', 'custom-multi-step-form'); ?>
+            </a>
+        </p>
+        <p class="description"><?php esc_html_e('Export includes settings, pricing, and steps.', 'custom-multi-step-form'); ?></p>
+        <p>
+            <label for="msf-import-json"><strong><?php esc_html_e('Import JSON', 'custom-multi-step-form'); ?></strong></label>
+            <textarea id="msf-import-json" class="large-text code" rows="8" placeholder="<?php esc_attr_e('Paste exported form JSON…', 'custom-multi-step-form'); ?>"></textarea>
+        </p>
+        <p>
+            <button type="button" class="button" id="msf-import-config"><?php esc_html_e('Import into builder', 'custom-multi-step-form'); ?></button>
+        </p>
+        <?php
+    }
+
+    public function render_preview_meta_box($post) {
+        $public = MSF_Form_Config::get_public($post->ID);
+
+        if (!$public || empty($public['steps'])) {
+            echo '<p>' . esc_html__('Add steps to preview the form.', 'custom-multi-step-form') . '</p>';
+            return;
+        }
+
+        $runtime_i18n = array(
+            'required'        => __('This field is required.', 'custom-multi-step-form'),
+            'submitting'      => __('Sending…', 'custom-multi-step-form'),
+            'error'           => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
+            'estimatedPrice'  => __('Aptuvenā cena', 'custom-multi-step-form'),
+            'summaryTitle'    => __('Kopsavilkums', 'custom-multi-step-form'),
+            'yourAnswers'     => __('Jūsu atbildes', 'custom-multi-step-form'),
+            'total'           => __('Kopā', 'custom-multi-step-form'),
+            'consentAccepted' => __('Piekrīts', 'custom-multi-step-form'),
+            'fileHint'        => __('Max. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
+            'previewSubmit'   => __('Preview mode — save the form and view on a page to submit.', 'custom-multi-step-form'),
+        );
+        ?>
+        <p class="description"><?php esc_html_e('Interactive preview (submissions disabled).', 'custom-multi-step-form'); ?></p>
+        <div
+            id="msf-admin-preview"
+            class="msf-form msf-form--preview"
+            data-msf-preview="1"
+            data-msf-form-id="<?php echo esc_attr($post->ID); ?>"
+            data-msf-config="<?php echo esc_attr(wp_json_encode($public)); ?>"
+            data-msf-i18n="<?php echo esc_attr(wp_json_encode($runtime_i18n)); ?>"
+        >
+            <div class="msf-form__progress" aria-hidden="true">
+                <div class="msf-form__progress-bar"></div>
+            </div>
+            <div class="msf-form__price-bar" hidden></div>
+            <div class="msf-form__body"></div>
+        </div>
         <?php
     }
 

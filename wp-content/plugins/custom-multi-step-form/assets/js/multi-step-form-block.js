@@ -1,6 +1,8 @@
 (function (blocks, element, blockEditor, components, i18n) {
     var el = element.createElement;
     var Fragment = element.Fragment;
+    var useEffect = element.useEffect;
+    var useRef = element.useRef;
     var useBlockProps = blockEditor.useBlockProps;
     var InspectorControls = blockEditor.InspectorControls;
     var PanelBody = components.PanelBody;
@@ -11,7 +13,7 @@
     var __ = i18n.__;
 
     function getEditorData() {
-        return window.msfBlockEditor || { forms: [], i18n: {} };
+        return window.msfBlockEditor || { forms: [], formConfigs: {}, i18n: {} };
     }
 
     var blockIcon = el(
@@ -62,6 +64,83 @@
         );
     }
 
+    function buildPreviewStyle(attributes) {
+        var style = {};
+
+        if (attributes.accentColor) {
+            style['--msf-color-primary'] = attributes.accentColor;
+            style['--msf-color-price-text'] = attributes.accentColor;
+        }
+
+        if (attributes.borderRadius) {
+            style['--msf-radius'] = attributes.borderRadius;
+        }
+
+        if (attributes.maxWidth) {
+            style['--msf-max-width'] = attributes.maxWidth;
+        }
+
+        return style;
+    }
+
+    function FormPreview(props) {
+        var mountRef = useRef(null);
+        var editorData = getEditorData();
+
+        useEffect(function () {
+            var mount = mountRef.current;
+
+            if (!mount || !props.formId) {
+                return undefined;
+            }
+
+            var config = (editorData.formConfigs || {})[props.formId];
+
+            if (!config) {
+                mount.innerHTML = '';
+                return undefined;
+            }
+
+            mount.innerHTML = '';
+            var root = document.createElement('div');
+            root.className = 'msf-form msf-form--preview';
+            root.setAttribute('data-msf-preview', '1');
+            root.setAttribute('data-msf-form-id', String(props.formId));
+            root.setAttribute('data-msf-config', JSON.stringify(config));
+            root.setAttribute('data-msf-i18n', JSON.stringify(editorData.previewI18n || {}));
+
+            Object.keys(props.style || {}).forEach(function (key) {
+                root.style.setProperty(key, props.style[key]);
+            });
+
+            root.innerHTML = ''
+                + '<div class="msf-form__progress" aria-hidden="true"><div class="msf-form__progress-bar"></div></div>'
+                + '<div class="msf-form__price-bar" hidden></div>'
+                + '<div class="msf-form__body"></div>';
+
+            mount.appendChild(root);
+
+            if (typeof window.msfInitForm === 'function') {
+                window.msfInitForm(root);
+            }
+
+            return function () {
+                mount.innerHTML = '';
+            };
+        }, [props.formId, JSON.stringify(props.style)]);
+
+        if (!props.formId) {
+            return null;
+        }
+
+        return el(
+            'div',
+            { className: 'msf-form-preview-wrap' },
+            el('p', { className: 'msf-form-preview-label' }, editorData.i18n.previewNote || ''),
+            el('div', { ref: mountRef })
+        );
+    }
+
     blocks.registerBlockType('custom-msf/form', {
         apiVersion: 2,
         title: __('Multi Step Form', 'custom-multi-step-form'),
@@ -89,6 +168,7 @@
             var selectedForm = (editorData.forms || []).find(function (f) {
                 return f.id === attributes.formId;
             });
+            var previewStyle = buildPreviewStyle(attributes);
 
             return el(
                 Fragment,
@@ -170,11 +250,17 @@
                                     onChange: function (formId) {
                                         setAttributes({ formId: formId });
                                     }
+                                }),
+                                el(FormPreview, {
+                                    formId: attributes.formId,
+                                    style: previewStyle
                                 })
                             ),
-                        el('p', {
-                            style: { margin: '16px 0 0', fontSize: '12px', color: '#646970' }
-                        }, editorData.i18n.openSettings || '')
+                        attributes.formId
+                            ? null
+                            : el('p', {
+                                style: { margin: '16px 0 0', fontSize: '12px', color: '#646970' }
+                            }, editorData.i18n.openSettings || '')
                     )
                 )
             );

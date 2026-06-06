@@ -11,7 +11,7 @@ chmod +x scripts/link-custom-multi-step-form-local.sh
 
 Then in WordPress:
 
-1. **Plugins** → activate **Custom Multi Step Form** (A.Pēda, v0.6.0)
+1. **Plugins** → activate **Custom Multi Step Form** (A.Pēda, v0.7.0)
 2. **Multi Step Forms → Form Settings** — set default owner email
 3. **Multi Step Forms → Add New** — add steps and publish the form
 4. Edit a page → **+** → **Multi Step Form** → choose the form in the block sidebar

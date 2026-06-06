@@ -35,6 +35,7 @@ class MSF_Plugin {
         $this->cpt      = new MSF_CPT();
         $this->settings = new MSF_Settings();
         $this->admin    = new MSF_Admin();
+        new MSF_Admin_Actions();
         $this->submit   = new MSF_Submit();
         $this->block    = new MSF_Block();
 

@@ -17,31 +17,68 @@ class MSF_Block {
     }
 
     public function enqueue_block_editor_assets() {
+        wp_enqueue_style(
+            'msf-form-runtime',
+            MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
+            array(),
+            msf_plugin()->get_asset_version('assets/css/form-runtime.css')
+        );
+
+        wp_enqueue_script(
+            'msf-form-runtime',
+            MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
+            array(),
+            msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
+            true
+        );
+
         if (!wp_script_is('custom-msf-block-editor', 'registered')) {
             return;
         }
 
-        $forms = array();
+        $forms        = array();
+        $form_configs = array();
 
         foreach (MSF_Form_Config::get_published_forms() as $form_post) {
             $forms[] = array(
                 'id'    => $form_post->ID,
                 'title' => $form_post->post_title,
             );
+
+            $public = MSF_Form_Config::get_public($form_post->ID);
+
+            if ($public) {
+                $form_configs[ $form_post->ID ] = $public;
+            }
         }
 
         wp_localize_script(
             'custom-msf-block-editor',
             'msfBlockEditor',
             array(
-                'forms' => $forms,
-                'i18n'  => array(
-                    'selectForm'   => __('Select form', 'custom-multi-step-form'),
-                    'noForms'      => __('No published forms yet. Create one under Multi Step Forms.', 'custom-multi-step-form'),
-                    'showTitle'    => __('Show form title', 'custom-multi-step-form'),
-                    'formRequired' => __('Choose a form below:', 'custom-multi-step-form'),
-                    'selected'     => __('Selected form:', 'custom-multi-step-form'),
-                    'openSettings' => __('Tip: open Settings (gear icon, top right) for more options.', 'custom-multi-step-form'),
+                'forms'       => $forms,
+                'formConfigs' => $form_configs,
+                'i18n'        => array(
+                    'selectForm'    => __('Select form', 'custom-multi-step-form'),
+                    'noForms'       => __('No published forms yet. Create one under Multi Step Forms.', 'custom-multi-step-form'),
+                    'showTitle'     => __('Show form title', 'custom-multi-step-form'),
+                    'formRequired'  => __('Choose a form below:', 'custom-multi-step-form'),
+                    'selected'      => __('Selected form:', 'custom-multi-step-form'),
+                    'openSettings'  => __('Tip: open Settings (gear icon, top right) for more options.', 'custom-multi-step-form'),
+                    'livePreview'   => __('Live preview', 'custom-multi-step-form'),
+                    'previewNote'   => __('Preview only — submissions are disabled in the editor.', 'custom-multi-step-form'),
+                ),
+                'previewI18n' => array(
+                    'required'        => __('This field is required.', 'custom-multi-step-form'),
+                    'submitting'      => __('Sending…', 'custom-multi-step-form'),
+                    'error'           => __('Something went wrong. Please try again.', 'custom-multi-step-form'),
+                    'estimatedPrice'  => __('Aptuvenā cena', 'custom-multi-step-form'),
+                    'summaryTitle'    => __('Kopsavilkums', 'custom-multi-step-form'),
+                    'yourAnswers'     => __('Jūsu atbildes', 'custom-multi-step-form'),
+                    'total'           => __('Kopā', 'custom-multi-step-form'),
+                    'consentAccepted' => __('Piekrīts', 'custom-multi-step-form'),
+                    'fileHint'        => __('Max. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
+                    'previewSubmit'   => __('Preview mode — publish the page to accept submissions.', 'custom-multi-step-form'),
                 ),
             )
         );
@@ -69,10 +106,27 @@ class MSF_Block {
             return;
         }
 
+        if (!wp_script_is('msf-form-runtime', 'registered')) {
+            wp_register_style(
+                'msf-form-runtime',
+                MSF_PLUGIN_URL . 'assets/css/form-runtime.css',
+                array(),
+                msf_plugin()->get_asset_version('assets/css/form-runtime.css')
+            );
+
+            wp_register_script(
+                'msf-form-runtime',
+                MSF_PLUGIN_URL . 'assets/js/form-runtime.js',
+                array(),
+                msf_plugin()->get_asset_version('assets/js/form-runtime.js'),
+                true
+            );
+        }
+
         wp_register_script(
             'custom-msf-block-editor',
             MSF_PLUGIN_URL . 'assets/js/multi-step-form-block.js',
-            array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n'),
+            array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'msf-form-runtime'),
             msf_plugin()->get_asset_version('assets/js/multi-step-form-block.js'),
             true
         );

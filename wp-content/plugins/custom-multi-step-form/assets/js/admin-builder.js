@@ -97,6 +97,7 @@
 
         var html = '<div class="msf-step-card" data-index="' + index + '">';
         html += '<div class="msf-step-card__head">';
+        html += '<span class="msf-step-drag-handle dashicons dashicons-move" title="' + escapeAttr(msfAdmin.i18n.dragHandle || 'Drag to reorder') + '" aria-hidden="true"></span>';
         html += '<strong>' + msfAdmin.i18n.step + ' <span class="msf-step-num">' + (index + 1) + '</span></strong>';
         html += '<button type="button" class="button-link-delete msf-remove-step">' + msfAdmin.i18n.removeStep + '</button>';
         html += '</div>';
@@ -151,6 +152,73 @@
             .replace(/</g, '&lt;');
     }
 
+    function initSortable() {
+        if (!$builder.hasClass('ui-sortable')) {
+            $builder.sortable({
+                handle: '.msf-step-drag-handle',
+                axis: 'y',
+                update: function () {
+                    initialSteps = collectSteps();
+                    renumber();
+                    syncHidden();
+                    refreshAdminPreview(collectSteps());
+                }
+            });
+        }
+    }
+
+    function refreshAdminPreview(steps) {
+        var preview = document.getElementById('msf-admin-preview');
+
+        if (!preview || typeof window.msfInitForm !== 'function') {
+            return;
+        }
+
+        var config = Object.assign({}, msfAdmin.previewConfig || {}, { steps: steps });
+        preview.setAttribute('data-msf-config', JSON.stringify(config));
+        preview.removeAttribute('data-msf-initialized');
+
+        var body = preview.querySelector('.msf-form__body');
+        if (body) {
+            body.innerHTML = '';
+        }
+
+        window.msfInitForm(preview);
+    }
+
+    function applyImportedConfig(config) {
+        if (!config || !Array.isArray(config.steps)) {
+            throw new Error('invalid');
+        }
+
+        if (config.settings) {
+            $('#msf_owner_email').val(config.settings.ownerEmail || '');
+            $('#msf_success_message').val(config.settings.successMessage || '');
+            $('#msf_customer_subject').val(config.settings.customerEmailSubject || '');
+            $('#msf_customer_body').val(config.settings.customerEmailBody || '');
+            $('#msf_submit_label').val(config.settings.submitLabel || '');
+            $('#msf_step_transition_ms').val(config.settings.stepTransitionMs || 400);
+        }
+
+        if (config.pricing) {
+            $('input[name="msf_pricing_enabled"]').prop('checked', !!config.pricing.enabled);
+            $('#msf_pricing_base').val(config.pricing.baseAmount || 0);
+            $('#msf_pricing_per_guest').val(config.pricing.perGuestRate || 0);
+            $('#msf_pricing_guest_question').val(config.pricing.perGuestQuestionId || '');
+            $('#msf_pricing_display').val(config.pricing.displayOn || 'summary');
+            $('#msf_pricing_currency').val(config.pricing.currency || 'EUR');
+        }
+
+        msfAdmin.previewConfig = Object.assign({}, msfAdmin.previewConfig || {}, {
+            settings: (config.settings || (msfAdmin.previewConfig && msfAdmin.previewConfig.settings)),
+            pricing: (config.pricing || (msfAdmin.previewConfig && msfAdmin.previewConfig.pricing)),
+            steps: config.steps
+        });
+
+        render(config.steps);
+        refreshAdminPreview(config.steps);
+    }
+
     function render(steps) {
         initialSteps = steps.slice();
         $builder.empty();
@@ -158,6 +226,7 @@
 
         if (!steps.length) {
             addStep();
+            initSortable();
             return;
         }
 
@@ -167,6 +236,7 @@
         });
 
         syncHidden();
+        initSortable();
     }
 
     function addStep() {
@@ -199,7 +269,7 @@
                 description: prev.description || '',
                 visibility: {
                     mode: visibilityMode,
-                    logic: 'and',
+                    logic: (prev.visibility && prev.visibility.logic) ? prev.visibility.logic : 'and',
                     conditions: []
                 },
                 questions: []
@@ -301,9 +371,25 @@
         addStep();
     });
 
+    $('#msf-import-config').on('click', function (e) {
+        e.preventDefault();
+        var raw = $('#msf-import-json').val();
+
+        try {
+            applyImportedConfig(JSON.parse(raw));
+            window.alert(msfAdmin.i18n.importSuccess || 'Configuration imported.');
+        } catch (err) {
+            window.alert(msfAdmin.i18n.importError || 'Invalid JSON.');
+        }
+    });
+
     $('form#post').on('submit', function () {
         syncHidden();
     });
 
     render(parseInitial());
+
+    if (document.getElementById('msf-admin-preview') && typeof window.msfInitForm === 'function') {
+        window.msfInitForm(document.getElementById('msf-admin-preview'));
+    }
 })(jQuery);

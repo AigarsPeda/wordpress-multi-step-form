@@ -296,6 +296,7 @@
         this.history = [];
         this.answers = {};
         this.fileAnswers = {};
+        this.isPreview = root.getAttribute('data-msf-preview') === '1';
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
             || (window.msfRuntime && window.msfRuntime.i18n)
             || {
@@ -854,6 +855,11 @@
         var fallbackError = this.i18n.error || 'Something went wrong. Please try again.';
         var fallbackSuccess = this.successMessage || 'Thank you! Your submission was received.';
 
+        if (this.isPreview) {
+            this.body.innerHTML = '<div class="msf-form__success"><p>' + (this.i18n.previewSubmit || 'Preview mode — submissions are disabled.') + '</p></div>';
+            return;
+        }
+
         this.body.innerHTML = '<p class="msf-form__loading">' + (this.i18n.submitting || 'Sending…') + '</p>';
 
         var data = new FormData();
@@ -922,9 +928,22 @@
             });
     };
 
+    function initForm(root) {
+        if (!root || root.getAttribute('data-msf-initialized') === '1') {
+            return null;
+        }
+
+        root.setAttribute('data-msf-initialized', '1');
+        var instance = new MSForm(root);
+        instance.init();
+        return instance;
+    }
+
+    window.msfInitForm = initForm;
+
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.msf-form').forEach(function (root) {
-            new MSForm(root).init();
+            initForm(root);
         });
     });
 })();
