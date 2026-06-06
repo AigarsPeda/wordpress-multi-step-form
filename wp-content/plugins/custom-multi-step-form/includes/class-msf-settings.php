@@ -34,6 +34,16 @@ class MSF_Settings {
                 'default'           => '',
             )
         );
+
+        register_setting(
+            'msf_settings',
+            MSF_Rate_Limit::OPTION_KEY,
+            array(
+                'type'              => 'array',
+                'sanitize_callback' => array('MSF_Rate_Limit', 'sanitize_settings'),
+                'default'           => MSF_Rate_Limit::DEFAULTS,
+            )
+        );
     }
 
     public function render_page() {
@@ -41,8 +51,9 @@ class MSF_Settings {
             return;
         }
 
-        $email = get_option(self::OPTION_EMAIL, '');
-        $seed_url = MSF_Seeder::get_seed_url();
+        $email       = get_option(self::OPTION_EMAIL, '');
+        $rate_limit  = MSF_Rate_Limit::get_settings();
+        $seed_url    = MSF_Seeder::get_seed_url();
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('Form Settings', 'custom-multi-step-form'); ?></h1>
@@ -89,6 +100,68 @@ class MSF_Settings {
                         </td>
                     </tr>
                 </table>
+
+                <h2><?php esc_html_e('Spam protection', 'custom-multi-step-form'); ?></h2>
+                <p class="description">
+                    <?php esc_html_e('Limits how many submissions one visitor can send per form within a time window. Uses the visitor IP address (no external service).', 'custom-multi-step-form'); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Rate limiting', 'custom-multi-step-form'); ?></th>
+                        <td>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="<?php echo esc_attr(MSF_Rate_Limit::OPTION_KEY); ?>[enabled]"
+                                    value="1"
+                                    <?php checked($rate_limit['enabled']); ?>
+                                >
+                                <?php esc_html_e('Enable rate limiting', 'custom-multi-step-form'); ?>
+                            </label>
+                            <p class="description">
+                                <?php esc_html_e('Works together with the honeypot field. Logged-in administrators are not limited.', 'custom-multi-step-form'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="msf_rate_limit_max"><?php esc_html_e('Max submissions', 'custom-multi-step-form'); ?></label>
+                        </th>
+                        <td>
+                            <input
+                                type="number"
+                                id="msf_rate_limit_max"
+                                name="<?php echo esc_attr(MSF_Rate_Limit::OPTION_KEY); ?>[maxSubmissions]"
+                                value="<?php echo esc_attr($rate_limit['maxSubmissions']); ?>"
+                                min="0"
+                                max="100"
+                                step="1"
+                                class="small-text"
+                            >
+                            <p class="description">
+                                <?php esc_html_e('Per visitor IP and form. Set to 0 to disable counting (even if the checkbox is on).', 'custom-multi-step-form'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="msf_rate_limit_window"><?php esc_html_e('Time window (minutes)', 'custom-multi-step-form'); ?></label>
+                        </th>
+                        <td>
+                            <input
+                                type="number"
+                                id="msf_rate_limit_window"
+                                name="<?php echo esc_attr(MSF_Rate_Limit::OPTION_KEY); ?>[windowMinutes]"
+                                value="<?php echo esc_attr($rate_limit['windowMinutes']); ?>"
+                                min="1"
+                                max="1440"
+                                step="1"
+                                class="small-text"
+                            >
+                        </td>
+                    </tr>
+                </table>
+
                 <?php submit_button(); ?>
             </form>
         </div>

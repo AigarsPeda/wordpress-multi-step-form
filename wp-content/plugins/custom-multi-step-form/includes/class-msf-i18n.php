@@ -52,6 +52,7 @@ class MSF_I18n {
             'consent_required' => __('Nepieciešama piekrišana.', 'custom-multi-step-form'),
             'upload_failed'    => __('Faila augšupielāde neizdevās.', 'custom-multi-step-form'),
             'file_too_large'   => __('Fails ir pārāk liels.', 'custom-multi-step-form'),
+            'rate_limited'     => __('Pārāk daudz pieteikumu. Lūdzu, mēģiniet vēlāk.', 'custom-multi-step-form'),
         );
     }
 }

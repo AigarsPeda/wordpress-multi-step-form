@@ -38,6 +38,15 @@ class MSF_Submit {
             wp_send_json_error(array('message' => $errors['not_configured']), 400);
         }
 
+        $rate_check = MSF_Rate_Limit::check($form_id);
+
+        if (is_wp_error($rate_check)) {
+            wp_send_json_error(
+                array('message' => $rate_check->get_error_message()),
+                429
+            );
+        }
+
         $raw_answers = isset($_POST['answers']) ? json_decode(wp_unslash($_POST['answers']), true) : array();
 
         if (!is_array($raw_answers)) {
@@ -56,6 +65,8 @@ class MSF_Submit {
         if (!$entry_id) {
             wp_send_json_error(array('message' => $errors['save_failed']), 500);
         }
+
+        MSF_Rate_Limit::record($form_id);
 
         $owner_email = MSF_Form_Config::get_owner_email($form_id);
         $customer_email = $this->find_email_answer($config, $raw_answers);
