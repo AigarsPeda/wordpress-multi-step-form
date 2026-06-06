@@ -152,6 +152,7 @@ class MSF_Admin {
                     'radio'    => __('Single choice (radio)', 'custom-multi-step-form'),
                     'checkbox' => __('Multiple choice (checkbox)', 'custom-multi-step-form'),
                     'email'    => __('Email', 'custom-multi-step-form'),
+                    'tel'      => __('Phone', 'custom-multi-step-form'),
                     'date'     => __('Date', 'custom-multi-step-form'),
                     'file'     => __('File upload', 'custom-multi-step-form'),
                     'consent'  => __('GDPR consent checkbox', 'custom-multi-step-form'),

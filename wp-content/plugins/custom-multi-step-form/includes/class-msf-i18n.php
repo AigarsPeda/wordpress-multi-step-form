@@ -23,10 +23,13 @@ class MSF_I18n {
             'fileHint'        => __('Maks. %s MB (JPG, PNG, PDF, DOC)', 'custom-multi-step-form'),
             'previewSubmit'   => __('Priekšskatījums — saglabājiet formu un skatiet lapā, lai nosūtītu.', 'custom-multi-step-form'),
             'loading'             => __('Ielādē formu…', 'custom-multi-step-form'),
-            'datePlaceholder'     => __('Izvēlieties datumu', 'custom-multi-step-form'),
+            'datePlaceholder'     => __('dd/mm/yyyy', 'custom-multi-step-form'),
             'dateAfterWeek'       => __('Pēc nedēļas', 'custom-multi-step-form'),
             'dateAfterMonth'      => __('Pēc mēneša', 'custom-multi-step-form'),
             'dateAfterThreeMonths'=> __('Pēc 3 mēnešiem', 'custom-multi-step-form'),
+            'invalidEmail'        => __('Lūdzu, ievadiet derīgu e-pasta adresi.', 'custom-multi-step-form'),
+            'invalidPhone'        => __('Lūdzu, ievadiet derīgu tālruņa numuru.', 'custom-multi-step-form'),
+            'invalidDate'         => __('Lūdzu, ievadiet derīgu datumu.', 'custom-multi-step-form'),
         );
 
         return apply_filters('msf_runtime_i18n', $strings);
@@ -41,6 +44,7 @@ class MSF_I18n {
             'save_failed'      => __('Neizdevās saglabāt pieteikumu.', 'custom-multi-step-form'),
             'required_field'   => __('Lūdzu, atbildiet: %s', 'custom-multi-step-form'),
             'invalid_email'    => __('Lūdzu, ievadiet derīgu e-pasta adresi.', 'custom-multi-step-form'),
+            'invalid_phone'    => __('Lūdzu, ievadiet derīgu tālruņa numuru.', 'custom-multi-step-form'),
             'invalid_answer'   => __('Izvēlēta nederīga atbilde.', 'custom-multi-step-form'),
             'invalid_date'     => __('Lūdzu, ievadiet derīgu datumu.', 'custom-multi-step-form'),
             'invalid_file'     => __('Nederīga faila augšupielāde.', 'custom-multi-step-form'),

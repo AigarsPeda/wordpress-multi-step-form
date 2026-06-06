@@ -275,6 +275,84 @@
         });
     }
 
+    function isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+    }
+
+    function isValidPhone(value) {
+        var trimmed = String(value || '').trim();
+
+        if (!trimmed || !/^[0-9+\s().\-]+$/.test(trimmed)) {
+            return false;
+        }
+
+        var digits = trimmed.replace(/\D+/g, '');
+        return digits.length >= 8 && digits.length <= 15;
+    }
+
+    function isValidIsoDate(value) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim())) {
+            return false;
+        }
+
+        var parts = String(value).split('-');
+        var year = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        var day = parseInt(parts[2], 10);
+        var date = new Date(year, month - 1, day);
+
+        return date.getFullYear() === year
+            && date.getMonth() === month - 1
+            && date.getDate() === day;
+    }
+
+    function getContactFormat(question) {
+        if (!question) {
+            return null;
+        }
+
+        if (question.type === 'email') {
+            return 'email';
+        }
+
+        if (question.type === 'tel') {
+            return 'phone';
+        }
+
+        if (question.format === 'email' || question.format === 'phone') {
+            return question.format;
+        }
+
+        if (question.type !== 'text') {
+            return null;
+        }
+
+        var id = String(question.id || '').toLowerCase();
+        var label = String(question.label || '').toLowerCase();
+
+        if (
+            id.indexOf('phone') !== -1
+            || id.indexOf('tel') !== -1
+            || label.indexOf('tālruņ') !== -1
+            || label.indexOf('talrun') !== -1
+            || label.indexOf('phone') !== -1
+        ) {
+            return 'phone';
+        }
+
+        if (
+            id.indexOf('email') !== -1
+            || id.indexOf('epast') !== -1
+            || label.indexOf('e-past') !== -1
+            || label.indexOf('epast') !== -1
+            || label.indexOf('email') !== -1
+        ) {
+            return 'email';
+        }
+
+        return null;
+    }
+
     function MSForm(root) {
         this.root = root;
         this.config = parseJson(root.getAttribute('data-msf-config'), null);
@@ -312,10 +390,13 @@
                 fileHint: 'Maks. %s MB (JPG, PNG, PDF, DOC)',
                 previewSubmit: 'Priekšskatījums — saglabājiet formu un skatiet lapā, lai nosūtītu.',
                 loading: 'Ielādē formu…',
-                datePlaceholder: 'Izvēlieties datumu',
+                datePlaceholder: 'dd/mm/yyyy',
                 dateAfterWeek: 'Pēc nedēļas',
                 dateAfterMonth: 'Pēc mēneša',
-                dateAfterThreeMonths: 'Pēc 3 mēnešiem'
+                dateAfterThreeMonths: 'Pēc 3 mēnešiem',
+                invalidEmail: 'Lūdzu, ievadiet derīgu e-pasta adresi.',
+                invalidPhone: 'Lūdzu, ievadiet derīgu tālruņa numuru.',
+                invalidDate: 'Lūdzu, ievadiet derīgu datumu.'
             };
     }
 
@@ -501,7 +582,7 @@
         if (question.type === 'date' && value) {
             var parts = String(value).split('-');
             if (parts.length === 3) {
-                return parts[2] + '.' + parts[1] + '.' + parts[0];
+                return parts[2] + '/' + parts[1] + '/' + parts[0];
             }
         }
 
@@ -619,14 +700,16 @@
         });
 
         if (typeof window.flatpickr !== 'function') {
-            input.type = 'date';
-            input.min = self.formatDateValue(new Date());
+            input.placeholder = self.i18n.datePlaceholder || 'dd/mm/yyyy';
             return;
         }
 
         var locale = (window.flatpickr.l10ns && window.flatpickr.l10ns.lv) ? window.flatpickr.l10ns.lv : undefined;
         var picker = window.flatpickr(input, {
             dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            altInputClass: 'msf-form__input',
             locale: locale,
             minDate: 'today',
             allowInput: true,
@@ -812,7 +895,19 @@
                 wrap.appendChild(el('input', {
                     className: 'msf-form__input',
                     type: 'email',
-                    name: question.id
+                    name: question.id,
+                    inputmode: 'email',
+                    autocomplete: 'email'
+                }));
+                wrap.querySelector('input').value = value || '';
+                break;
+            case 'tel':
+                wrap.appendChild(el('input', {
+                    className: 'msf-form__input',
+                    type: 'tel',
+                    name: question.id,
+                    inputmode: 'tel',
+                    autocomplete: 'tel'
                 }));
                 wrap.querySelector('input').value = value || '';
                 break;
@@ -864,7 +959,7 @@
                     type: 'text',
                     name: question.id,
                     autocomplete: 'off',
-                    placeholder: this.i18n.datePlaceholder || 'Izvēlieties datumu'
+                    placeholder: this.i18n.datePlaceholder || 'dd/mm/yyyy'
                 });
                 dateInput.value = value || '';
                 pickerWrap.appendChild(dateInput);
@@ -906,24 +1001,97 @@
                 }
                 wrap.appendChild(consentLabel);
                 break;
-            default:
-                wrap.appendChild(el('input', {
+            default: {
+                var contactFormat = getContactFormat(question);
+                var inputType = 'text';
+                var inputAttrs = {
                     className: 'msf-form__input',
-                    type: 'text',
+                    type: inputType,
                     name: question.id
-                }));
+                };
+
+                if (contactFormat === 'email') {
+                    inputAttrs.type = 'email';
+                    inputAttrs.inputmode = 'email';
+                    inputAttrs.autocomplete = 'email';
+                } else if (contactFormat === 'phone') {
+                    inputAttrs.type = 'tel';
+                    inputAttrs.inputmode = 'tel';
+                    inputAttrs.autocomplete = 'tel';
+                }
+
+                wrap.appendChild(el('input', inputAttrs));
                 wrap.querySelector('input').value = value || '';
+                break;
+            }
         }
 
         return wrap;
     };
 
+    MSForm.prototype.showFieldError = function (message) {
+        var step = this.body.querySelector('.msf-form__step');
+
+        if (step) {
+            step.appendChild(el('p', { className: 'msf-form__error', text: message }));
+        }
+    };
+
     MSForm.prototype.validateCurrent = function (question) {
-        var message = this.i18n.required || 'Šis lauks ir obligāts.';
+        var requiredMessage = this.i18n.required || 'Šis lauks ir obligāts.';
         var existing = this.body.querySelector('.msf-form__error');
 
         if (existing) {
             existing.remove();
+        }
+
+        var contactFormat = getContactFormat(question);
+
+        if (contactFormat) {
+            var contactField = this.body.querySelector('[name="' + question.id + '"]');
+            var contactValue = contactField ? String(contactField.value || '').trim() : '';
+
+            if (!contactValue) {
+                if (!question.required) {
+                    return true;
+                }
+
+                this.showFieldError(requiredMessage);
+                return false;
+            }
+
+            if (contactFormat === 'email' && !isValidEmail(contactValue)) {
+                this.showFieldError(this.i18n.invalidEmail || 'Lūdzu, ievadiet derīgu e-pasta adresi.');
+                return false;
+            }
+
+            if (contactFormat === 'phone' && !isValidPhone(contactValue)) {
+                this.showFieldError(this.i18n.invalidPhone || 'Lūdzu, ievadiet derīgu tālruņa numuru.');
+                return false;
+            }
+
+            return true;
+        }
+
+        if (question.type === 'date') {
+            var dateField = this.body.querySelector('[name="' + question.id + '"]');
+            var dateValue = dateField ? String(dateField.value || '').trim() : '';
+
+            if (!dateValue) {
+                if (!question.required) {
+                    return true;
+                }
+
+                this.showFieldError(requiredMessage);
+                return false;
+            }
+
+            if (!isValidIsoDate(dateValue)) {
+                this.showFieldError(this.i18n.invalidDate || 'Lūdzu, ievadiet derīgu datumu.');
+                return false;
+            }
+
+            return true;
         }
 
         if (!question.required) {
@@ -941,16 +1109,13 @@
         } else if (question.type === 'file') {
             var fileField = this.body.querySelector('[name="' + question.id + '"]');
             valid = !!(this.fileAnswers[question.id] || (fileField && fileField.files && fileField.files[0]));
-        } else if (question.type === 'date') {
-            var dateField = this.body.querySelector('[name="' + question.id + '"]');
-            valid = dateField ? String(dateField.value || '').trim() !== '' : false;
         } else {
             var field = this.body.querySelector('[name="' + question.id + '"]');
             valid = field ? String(field.value || '').trim() !== '' : false;
         }
 
         if (!valid) {
-            this.body.querySelector('.msf-form__step').appendChild(el('p', { className: 'msf-form__error', text: message }));
+            this.showFieldError(requiredMessage);
         }
 
         return valid;

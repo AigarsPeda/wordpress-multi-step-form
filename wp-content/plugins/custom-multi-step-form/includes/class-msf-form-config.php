@@ -8,7 +8,7 @@ class MSF_Form_Config {
 
     const META_KEY = '_msf_config';
 
-    const QUESTION_TYPES = array('text', 'textarea', 'number', 'radio', 'checkbox', 'email', 'date', 'file', 'consent');
+    const QUESTION_TYPES = array('text', 'textarea', 'number', 'radio', 'checkbox', 'email', 'tel', 'date', 'file', 'consent');
 
     public static function default_config() {
         return array(

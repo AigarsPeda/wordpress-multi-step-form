@@ -50,3 +50,7 @@
 .msf-form__date-picker-wrap {
     position: relative;
 }
+
+.msf-form__date-picker-wrap .flatpickr-input.form-control {
+    width: 100%;
+}

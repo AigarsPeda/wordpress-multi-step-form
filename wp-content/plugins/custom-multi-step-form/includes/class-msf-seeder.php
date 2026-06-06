@@ -8,7 +8,7 @@ class MSF_Seeder {
 
     const OPTION_KEY = 'msf_sample_form_seeded';
     const CONFIG_VERSION_KEY = 'msf_sample_form_config_version';
-    const CONFIG_VERSION = 3;
+    const CONFIG_VERSION = 4;
 
     public static function get_banquet_quote_config() {
         $config = MSF_Form_Config::default_config();
@@ -269,7 +269,7 @@ class MSF_Seeder {
                 'questions'   => array(
                     array(
                         'id'       => 'q_phone',
-                        'type'     => 'text',
+                        'type'     => 'tel',
                         'label'    => 'Tālruņa numurs',
                         'required' => true,
                         'options'  => array(),

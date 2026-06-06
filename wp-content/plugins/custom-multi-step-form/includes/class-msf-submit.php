@@ -107,8 +107,14 @@ class MSF_Submit {
             switch ($question['type']) {
                 case 'email':
                     $value = sanitize_email($value);
-                    if (!is_email($value)) {
+                    if (!MSF_Validation::is_valid_email($value)) {
                         return new WP_Error('email', $errors['invalid_email']);
+                    }
+                    break;
+                case 'tel':
+                    $value = MSF_Validation::sanitize_phone($value);
+                    if (!MSF_Validation::is_valid_phone($value)) {
+                        return new WP_Error('phone', $errors['invalid_phone']);
                     }
                     break;
                 case 'number':
@@ -116,6 +122,16 @@ class MSF_Submit {
                     break;
                 case 'text':
                     $value = sanitize_text_field($value);
+                    $contact_format = MSF_Validation::get_contact_format($question);
+                    if ($contact_format === 'email' && !MSF_Validation::is_valid_email($value)) {
+                        return new WP_Error('email', $errors['invalid_email']);
+                    }
+                    if ($contact_format === 'phone') {
+                        $value = MSF_Validation::sanitize_phone($value);
+                        if (!MSF_Validation::is_valid_phone($value)) {
+                            return new WP_Error('phone', $errors['invalid_phone']);
+                        }
+                    }
                     break;
                 case 'textarea':
                     $value = sanitize_textarea_field($value);
@@ -255,7 +271,7 @@ class MSF_Submit {
             $timestamp = strtotime($value);
 
             if ($timestamp) {
-                return wp_date('d.m.Y', $timestamp);
+                return wp_date('d/m/Y', $timestamp);
             }
         }
 
