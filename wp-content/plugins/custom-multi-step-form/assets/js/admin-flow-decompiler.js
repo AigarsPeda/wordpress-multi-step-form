@@ -1,7 +1,7 @@
 (function (window) {
     'use strict';
 
-    var SCENARIO_CAP = 48;
+    var SCENARIO_CAP = 128;
 
     function findOptionIndex(question, value) {
         if (!question || !question.options) {
@@ -193,28 +193,102 @@
         return null;
     }
 
-    function collectBranchQuestionIds(steps) {
+    function collectVisibilityQuestionIds(steps) {
         var ids = [];
         var seen = {};
+
+        function addId(questionId) {
+            if (!questionId || seen[questionId]) {
+                return;
+            }
+
+            seen[questionId] = true;
+            ids.push(questionId);
+        }
+
+        function visitConditions(conditions) {
+            (conditions || []).forEach(function (cond) {
+                addId(cond.questionId);
+            });
+        }
+
+        function visitGroup(group) {
+            visitConditions(group.conditions);
+            (group.groups || []).forEach(visitGroup);
+        }
+
+        function visitVisibility(visibility) {
+            if (!visibility || visibility.mode !== 'conditional') {
+                return;
+            }
+
+            visitConditions(visibility.conditions);
+            (visibility.groups || []).forEach(visitGroup);
+        }
+
+        steps.forEach(function (step) {
+            visitVisibility(step.visibility || {});
+        });
+
+        return ids;
+    }
+
+    function collectNumericScenarioValues(steps, questionId) {
+        var values = ['__msf_unset__', '1', '50', '150'];
+        var seen = { __msf_unset__: true, '1': true, '50': true, '150': true };
+
+        function addValue(value) {
+            var key = String(value);
+
+            if (seen[key]) {
+                return;
+            }
+
+            seen[key] = true;
+            values.push(key);
+        }
+
+        function visitConditions(conditions) {
+            (conditions || []).forEach(function (cond) {
+                var threshold;
+
+                if (cond.questionId !== questionId) {
+                    return;
+                }
+
+                if (['greaterThan', 'lessThan', 'greaterOrEqual', 'lessOrEqual'].indexOf(cond.operator) === -1) {
+                    return;
+                }
+
+                threshold = parseFloat(cond.value);
+
+                if (isNaN(threshold)) {
+                    return;
+                }
+
+                addValue(threshold - 1);
+                addValue(threshold);
+                addValue(threshold + 1);
+            });
+        }
+
+        function visitGroup(group) {
+            visitConditions(group.conditions);
+            (group.groups || []).forEach(visitGroup);
+        }
 
         steps.forEach(function (step) {
             var visibility = step.visibility || {};
 
-            if (visibility.mode !== 'conditional' || (visibility.groups && visibility.groups.length)) {
+            if (visibility.mode !== 'conditional') {
                 return;
             }
 
-            (visibility.conditions || []).forEach(function (cond) {
-                if (!cond.questionId || seen[cond.questionId]) {
-                    return;
-                }
-
-                seen[cond.questionId] = true;
-                ids.push(cond.questionId);
-            });
+            visitConditions(visibility.conditions);
+            (visibility.groups || []).forEach(visitGroup);
         });
 
-        return ids;
+        return values;
     }
 
     function scenarioValuesForQuestion(steps, questionId) {
@@ -233,13 +307,76 @@
             return values;
         }
 
+        if (question.type === 'number') {
+            return collectNumericScenarioValues(steps, questionId);
+        }
+
         values.push('__msf_match__', '__msf_other__');
         return values;
     }
 
+    function addTargetedVisibilityScenarios(steps, scenarios) {
+        var targeted = [];
+        var seen = {};
+        var key;
+        var patch;
+
+        function rememberScenario(candidate) {
+            key = JSON.stringify(candidate);
+
+            if (!Object.keys(candidate).length || seen[key]) {
+                return;
+            }
+
+            seen[key] = true;
+            targeted.push(candidate);
+        }
+
+        function visitGroup(group) {
+            patch = {};
+            (group.conditions || []).forEach(function (cond) {
+                if (!cond.questionId) {
+                    return;
+                }
+
+                if (cond.operator === 'greaterThan' || cond.operator === 'greaterOrEqual') {
+                    patch[cond.questionId] = String(parseFloat(cond.value) + 1);
+                } else if (cond.operator === 'lessThan' || cond.operator === 'lessOrEqual') {
+                    patch[cond.questionId] = String(parseFloat(cond.value) - 1);
+                } else if (cond.value !== undefined) {
+                    patch[cond.questionId] = cond.value;
+                }
+            });
+            rememberScenario(patch);
+            (group.groups || []).forEach(visitGroup);
+        }
+
+        steps.forEach(function (step) {
+            var visibility = step.visibility || {};
+
+            if (visibility.mode !== 'conditional') {
+                return;
+            }
+
+            (visibility.conditions || []).forEach(function (cond) {
+                patch = {};
+
+                if (cond.questionId && cond.value !== undefined) {
+                    patch[cond.questionId] = cond.value;
+                }
+
+                rememberScenario(patch);
+            });
+
+            (visibility.groups || []).forEach(visitGroup);
+        });
+
+        return targeted.concat(scenarios);
+    }
+
     function generateAnswerScenarios(steps) {
         var scenarios = [{}];
-        var questionIds = collectBranchQuestionIds(steps);
+        var questionIds = collectVisibilityQuestionIds(steps);
         var q;
         var values;
         var next;
@@ -275,7 +412,63 @@
             }
         }
 
-        return scenarios.length ? scenarios : [{}];
+        scenarios = addTargetedVisibilityScenarios(steps, scenarios.length ? scenarios : [{}]);
+
+        return scenarios;
+    }
+
+    function addSequentialFallbackEdges(steps, editableEdges, seen, portUsage) {
+        var index;
+        var step;
+        var next;
+        var scan;
+        var pathKey;
+        var hasOutgoing;
+
+        for (index = 0; index < steps.length; index++) {
+            step = steps[index];
+
+            if (!step || step.type === 'summary') {
+                continue;
+            }
+
+            hasOutgoing = editableEdges.some(function (edge) {
+                return edge.from === step.id;
+            });
+
+            if (hasOutgoing) {
+                continue;
+            }
+
+            next = null;
+
+            for (scan = index + 1; scan < steps.length; scan++) {
+                if (!steps[scan] || (steps[scan].visibility && steps[scan].visibility.mode === 'never')) {
+                    continue;
+                }
+
+                next = steps[scan];
+                break;
+            }
+
+            if (!next) {
+                continue;
+            }
+
+            pathKey = step.id + '->' + next.id;
+
+            if (seen[pathKey]) {
+                continue;
+            }
+
+            seen[pathKey] = true;
+            editableEdges.push({
+                from: step.id,
+                to: next.id,
+                outputPort: allocateOutputPort(step.id, next.id, steps, portUsage),
+                label: 'next'
+            });
+        }
     }
 
     function addRuntimePathEdges(steps, edges, seen) {
@@ -451,12 +644,23 @@
         var maxPorts = countOutputsForStep(step);
         var port;
         var p;
+        var usedMax = 1;
 
         if (!portUsage[fromStepId]) {
             portUsage[fromStepId] = {};
         }
 
-        for (p = 1; p <= Math.max(1, maxPorts); p++) {
+        Object.keys(portUsage[fromStepId]).forEach(function (portName) {
+            var portNum = parseInt(String(portName).replace('output_', ''), 10);
+
+            if (!isNaN(portNum)) {
+                usedMax = Math.max(usedMax, portNum);
+            }
+        });
+
+        maxPorts = Math.max(maxPorts, usedMax + 1);
+
+        for (p = 1; p <= maxPorts; p++) {
             port = 'output_' + p;
 
             if (!portUsage[fromStepId][port]) {
@@ -465,7 +669,7 @@
             }
         }
 
-        port = 'output_1';
+        port = 'output_' + (maxPorts + 1);
         portUsage[fromStepId][port] = toStepId;
 
         return port;
@@ -515,6 +719,9 @@
         });
 
         graph.edges.forEach(function (edge) {
+            var pathKey;
+            var port;
+
             if (edge.from === '__start__' || edge.kind === 'start' || edge.kind === 'condition') {
                 return;
             }
@@ -523,11 +730,17 @@
                 return;
             }
 
-            var port = allocateOutputPort(edge.from, edge.to, steps, portUsage);
+            pathKey = edge.from + '->' + edge.to;
 
-            key = edge.from + '->' + edge.to + ':' + port;
+            if (seen[pathKey]) {
+                return;
+            }
+
+            port = allocateOutputPort(edge.from, edge.to, steps, portUsage);
+            key = pathKey + ':' + port;
 
             if (!seen[key]) {
+                seen[pathKey] = true;
                 seen[key] = true;
                 editableEdges.push({
                     from: edge.from,
@@ -551,6 +764,8 @@
 
             node.step = fullStep;
         });
+
+        addSequentialFallbackEdges(steps, editableEdges, seen, portUsage);
 
         if (steps.length) {
             key = '__start__->' + steps[0].id + ':output_1';

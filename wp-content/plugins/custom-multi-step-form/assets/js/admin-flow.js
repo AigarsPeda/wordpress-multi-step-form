@@ -15,6 +15,9 @@
     var canvasPanStart = null;
     var canvasNavBound = false;
     var isRenderingFlow = false;
+    var flowResizeObserver = null;
+    var fitResizeTimer = null;
+    var initialFlowViewPending = false;
 
     if (!$flowView.length || !$canvas.length || typeof msfAdmin === 'undefined') {
         return;
@@ -341,6 +344,7 @@
                 + '<p><label>' + escapeHtml(msfAdmin.i18n.stepTitle || 'Step title') + '<br>'
                 + '<input type="text" class="widefat msf-flow-inspector-title" value="' + escapeAttr(data.title || '') + '"></label></p>'
                 + '<p class="description">' + escapeHtml(msfAdmin.i18n.flowSummaryHelp || 'Summary is the final review step before submit.') + '</p>'
+                + '<p><button type="button" class="button button-secondary msf-flow-center-node">' + escapeHtml(msfAdmin.i18n.flowCenterNode || 'Center on step') + '</button></p>'
                 + '<p><button type="button" class="button button-link-delete msf-flow-delete-node">' + escapeHtml(msfAdmin.i18n.flowDeleteNode || 'Delete step') + '</button></p>'
             );
             return;
@@ -373,6 +377,7 @@
             + escapeHtml(msfAdmin.i18n.options || 'Options') + '<br>'
             + '<textarea class="widefat msf-flow-inspector-options" rows="4">' + escapeHtml(optionsToText(question.options)) + '</textarea></label></p>'
             + '<p class="description">' + escapeHtml(msfAdmin.i18n.flowBranchHelp || 'Connect the top output for the default next step. Connect lower outputs for each answer branch.') + '</p>'
+            + '<p><button type="button" class="button button-secondary msf-flow-center-node">' + escapeHtml(msfAdmin.i18n.flowCenterNode || 'Center on step') + '</button></p>'
             + '<p><button type="button" class="button button-link-delete msf-flow-delete-node">' + escapeHtml(msfAdmin.i18n.flowDeleteNode || 'Delete step') + '</button></p>';
 
         if (data.hasAdvancedVisibility) {
@@ -430,6 +435,55 @@
         editor.zoom_last_value = newZoom;
         resetDrawflowDragState();
         applyCanvasTransform();
+    }
+
+    function isFlowViewVisible() {
+        return $flowView.length && $flowView[0] && $flowView[0].hidden === false;
+    }
+
+    function sanitizeGraphPositions(graph) {
+        var positioned;
+        var minX;
+        var minY;
+        var maxX;
+        var maxY;
+
+        if (!graph || !Array.isArray(graph.nodes) || !graph.nodes.length) {
+            return graph;
+        }
+
+        positioned = 0;
+        minX = Infinity;
+        minY = Infinity;
+        maxX = -Infinity;
+        maxY = -Infinity;
+
+        graph.nodes.forEach(function (node) {
+            if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+                return;
+            }
+
+            positioned++;
+            minX = Math.min(minX, node.x);
+            minY = Math.min(minY, node.y);
+            maxX = Math.max(maxX, node.x + 260);
+            maxY = Math.max(maxY, node.y + 140);
+        });
+
+        if (!positioned || positioned !== graph.nodes.length) {
+            return graph;
+        }
+
+        // Saved layout stuck in the bottom-right pocket of the canvas — re-layout from scratch.
+        if (minX >= 420 && minY >= 260) {
+            graph.nodes.forEach(function (node) {
+                node.x = null;
+                node.y = null;
+            });
+            graph.start = null;
+        }
+
+        return graph;
     }
 
     function getNodeBounds() {
@@ -493,8 +547,9 @@
         var scaleX;
         var scaleY;
         var zoom;
+        var nodeCount;
 
-        if (!editor) {
+        if (!editor || !isFlowViewVisible()) {
             return false;
         }
 
@@ -502,19 +557,32 @@
         viewWidth = container.clientWidth;
         viewHeight = container.clientHeight;
 
-        if (!viewWidth || !viewHeight) {
+        if (viewWidth < 100 || viewHeight < 100) {
             return false;
         }
 
         padding = typeof padding === 'number' ? padding : 48;
+        nodeCount = Object.keys(getHomeData()).length;
+
+        editor.canvas_x = 0;
+        editor.canvas_y = 0;
+        editor.zoom = 1;
+        editor.zoom_last_value = 1;
+        applyCanvasTransform();
+
         bounds = getNodeBounds();
 
-        if (!bounds) {
+        if (!bounds || !nodeCount) {
             return false;
         }
 
         contentWidth = Math.max(bounds.maxX - bounds.minX, 1);
         contentHeight = Math.max(bounds.maxY - bounds.minY, 1);
+
+        if (nodeCount > 1 && contentWidth < 40 && contentHeight < 40) {
+            return false;
+        }
+
         scaleX = (viewWidth - padding * 2) / contentWidth;
         scaleY = (viewHeight - padding * 2) / contentHeight;
         zoom = Math.min(scaleX, scaleY, editor.zoom_max || 1.6);
@@ -530,24 +598,105 @@
         return true;
     }
 
-    function scheduleFitFlowToView() {
-        var attempts = 0;
+    function findStartDrawflowId() {
+        var homeData = getHomeData();
+        var nodeId;
 
-        function tryFit() {
-            if (fitFlowToView()) {
-                return;
+        for (nodeId in homeData) {
+            if (!homeData.hasOwnProperty(nodeId)) {
+                continue;
             }
 
-            attempts += 1;
+            if (homeData[nodeId].data && homeData[nodeId].data.stepId === '__start__') {
+                return nodeId;
+            }
 
-            if (attempts < 12) {
-                window.setTimeout(tryFit, 50);
+            if (homeData[nodeId].class && homeData[nodeId].class.indexOf('msf-flow-node-wrap--start') !== -1) {
+                return nodeId;
             }
         }
 
-        window.requestAnimationFrame(function () {
-            tryFit();
+        return null;
+    }
+
+    function centerOnStartNode() {
+        var startId;
+
+        if (!editor || !isFlowViewVisible()) {
+            return false;
+        }
+
+        if ($canvas[0].clientWidth < 100 || $canvas[0].clientHeight < 100) {
+            return false;
+        }
+
+        startId = findStartDrawflowId();
+
+        if (!startId) {
+            return false;
+        }
+
+        editor.zoom = 1;
+        editor.zoom_last_value = 1;
+
+        return centerOnDrawflowNode(startId);
+    }
+
+    function scheduleInitialFlowView() {
+        var delays = [0, 60, 150, 300, 500, 800];
+        var attempt = 0;
+
+        function runCenter() {
+            if (!editor || !isFlowViewVisible() || !initialFlowViewPending) {
+                return false;
+            }
+
+            if (centerOnStartNode()) {
+                initialFlowViewPending = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        function tryUntilCentered() {
+            if (runCenter()) {
+                return;
+            }
+
+            attempt += 1;
+
+            if (attempt < 25) {
+                window.setTimeout(tryUntilCentered, 100);
+            }
+        }
+
+        delays.forEach(function (delay) {
+            window.setTimeout(runCenter, delay);
         });
+
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+                tryUntilCentered();
+            });
+        });
+    }
+
+    function bindFlowCanvasObserver() {
+        if (!window.ResizeObserver || flowResizeObserver || !$canvas.length) {
+            return;
+        }
+
+        flowResizeObserver = new ResizeObserver(function () {
+            window.clearTimeout(fitResizeTimer);
+            fitResizeTimer = window.setTimeout(function () {
+                if (editor && isFlowViewVisible() && initialFlowViewPending) {
+                    centerOnStartNode();
+                }
+            }, 80);
+        });
+
+        flowResizeObserver.observe($canvas[0]);
     }
 
     function zoomFlowBy(delta) {
@@ -556,6 +705,110 @@
         }
 
         setCanvasZoom(editor.zoom + delta);
+    }
+
+    function wheelDeltaToZoomChange(event) {
+        var deltaY = event.deltaY;
+
+        if (event.deltaMode === 1) {
+            deltaY *= 18;
+        } else if (event.deltaMode === 2) {
+            deltaY *= 320;
+        }
+
+        return Math.max(-0.035, Math.min(0.035, -deltaY * 0.00045));
+    }
+
+    function buildRequiredOutputCounts(edges) {
+        var counts = {};
+
+        (edges || []).forEach(function (edge) {
+            var portNum = parseInt(String(edge.outputPort || 'output_1').replace('output_', ''), 10) || 1;
+
+            if (!counts[edge.from]) {
+                counts[edge.from] = 1;
+            }
+
+            counts[edge.from] = Math.max(counts[edge.from], portNum);
+        });
+
+        return counts;
+    }
+
+    function buildRequiredInputCounts(edges) {
+        var counts = {};
+
+        (edges || []).forEach(function (edge) {
+            if (!edge.to) {
+                return;
+            }
+
+            counts[edge.to] = (counts[edge.to] || 0) + 1;
+        });
+
+        return counts;
+    }
+
+    function centerOnDrawflowNode(drawflowId) {
+        var node;
+        var el;
+        var container;
+        var viewWidth;
+        var viewHeight;
+        var zoom;
+        var nodeWidth;
+        var nodeHeight;
+        var nodeX;
+        var nodeY;
+        var centerX;
+        var centerY;
+
+        if (!editor || !drawflowId) {
+            return false;
+        }
+
+        node = getHomeData()[drawflowId];
+        el = document.getElementById('node-' + drawflowId);
+
+        if (!node || !el) {
+            return false;
+        }
+
+        container = $canvas[0];
+        viewWidth = container.clientWidth;
+        viewHeight = container.clientHeight;
+        zoom = editor.zoom;
+        nodeWidth = el.offsetWidth;
+        nodeHeight = el.offsetHeight;
+        nodeX = parseFloat(node.pos_x, 10);
+
+        if (isNaN(nodeX)) {
+            nodeX = el.offsetLeft;
+        }
+
+        nodeY = parseFloat(node.pos_y, 10);
+
+        if (isNaN(nodeY)) {
+            nodeY = el.offsetTop;
+        }
+
+        centerX = nodeX + nodeWidth / 2;
+        centerY = nodeY + nodeHeight / 2;
+        editor.canvas_x = viewWidth / 2 - centerX * zoom;
+        editor.canvas_y = viewHeight / 2 - centerY * zoom;
+        resetDrawflowDragState();
+        applyCanvasTransform();
+
+        return true;
+    }
+
+    function centerOnSelectedNode() {
+        if (!selectedDrawflowId) {
+            window.alert(msfAdmin.i18n.flowSelectNodeCenter || 'Select a step node first.');
+            return false;
+        }
+
+        return centerOnDrawflowNode(selectedDrawflowId);
     }
 
     function isInteractiveFlowTarget(target) {
@@ -579,7 +832,7 @@
             var rect;
             var delta;
 
-            if (!editor || $flowView.prop('hidden')) {
+            if (!editor || !isFlowViewVisible()) {
                 return;
             }
 
@@ -587,7 +840,12 @@
             event.stopPropagation();
 
             rect = container.getBoundingClientRect();
-            delta = event.deltaY > 0 ? -(editor.zoom_value || 0.1) : (editor.zoom_value || 0.1);
+            delta = wheelDeltaToZoomChange(event);
+
+            if (!delta) {
+                return;
+            }
+
             setCanvasZoom(editor.zoom + delta, event.clientX - rect.left, event.clientY - rect.top);
         }, { passive: false, capture: true });
 
@@ -641,7 +899,7 @@
         });
 
         window.addEventListener('keydown', function (event) {
-            if ($flowView.prop('hidden') || event.code !== 'Space' || spacePanHeld || shouldIgnoreCanvasKeys(event.target)) {
+            if (!isFlowViewVisible() || event.code !== 'Space' || spacePanHeld || shouldIgnoreCanvasKeys(event.target)) {
                 return;
             }
 
@@ -695,11 +953,12 @@
         });
     }
 
-    function addNodeToCanvas(nodeData, x, y) {
-        var outputs = countOutputs(nodeData);
+    function addNodeToCanvas(nodeData, x, y, minOutputs, minInputs) {
+        var outputs = Math.max(countOutputs(nodeData), minOutputs || 1);
+        var inputs = Math.max(1, minInputs || 1);
         var nodeId = editor.addNode(
             'step',
-            1,
+            inputs,
             outputs,
             x,
             y,
@@ -719,6 +978,7 @@
         var steps = getSteps();
 
         isRenderingFlow = true;
+        initialFlowViewPending = true;
         canvasPanning = false;
         canvasPanStart = null;
         spacePanHeld = false;
@@ -742,21 +1002,26 @@
             editor.canvas_y = 0;
             editor.start();
             bindCanvasNavigation();
+            bindFlowCanvasObserver();
             bindEditorEvents();
 
             var graph = steps.length
                 ? window.MsfFlowDecompiler.decompileForEditor(steps, msfAdmin.flowLayout || null)
                 : { nodes: [], edges: [], warnings: [], start: { x: 40, y: 120 } };
 
+            graph = sanitizeGraphPositions(graph);
+
             if (window.MsfFlowLayout) {
                 graph = window.MsfFlowLayout.apply(graph);
             }
 
+            var requiredOutputCounts = buildRequiredOutputCounts(graph.edges || []);
+            var requiredInputCounts = buildRequiredInputCounts(graph.edges || []);
             var nodeMap = {};
             var startId = editor.addNode(
                 'start',
                 0,
-                1,
+                requiredOutputCounts.__start__ || 1,
                 graph.start.x,
                 graph.start.y,
                 'msf-flow-node-wrap msf-flow-node-wrap--start',
@@ -785,12 +1050,19 @@
 
                 nodeData.index = index;
 
-                var drawflowId = addNodeToCanvas(nodeData, node.x, node.y);
+                var drawflowId = addNodeToCanvas(
+                    nodeData,
+                    node.x,
+                    node.y,
+                    requiredOutputCounts[node.stepId] || 1,
+                    requiredInputCounts[node.stepId] || 1
+                );
 
                 nodeMap[node.stepId] = drawflowId;
             });
 
             addEdge(nodeMap, graph.edges || []);
+            refreshFlowConnections();
 
             renderWarnings(graph.warnings);
 
@@ -799,23 +1071,61 @@
             }
         } finally {
             isRenderingFlow = false;
-            scheduleFitFlowToView();
+            scheduleInitialFlowView();
         }
     }
 
     function addEdge(nodeMap, edges) {
+        var inputPortUsage = {};
+
+        function allocateInputPort(toStepId) {
+            if (!inputPortUsage[toStepId]) {
+                inputPortUsage[toStepId] = 0;
+            }
+
+            inputPortUsage[toStepId] += 1;
+
+            return 'input_' + inputPortUsage[toStepId];
+        }
+
         edges.forEach(function (edge) {
             var fromId = nodeMap[edge.from];
             var toId = nodeMap[edge.to];
             var outputPort = edge.outputPort || 'output_1';
+            var inputPort = edge.inputPort || allocateInputPort(edge.to);
+            var fromNode;
+            var created;
 
             if (!fromId || !toId) {
                 return;
             }
 
-            editor.addConnection(fromId, toId, outputPort, 'input_1');
-        });
+            editor.addConnection(fromId, toId, outputPort, inputPort);
 
+            fromNode = getHomeData()[fromId];
+
+            if (!fromNode || !fromNode.outputs || !fromNode.outputs[outputPort]) {
+                return;
+            }
+
+            created = fromNode.outputs[outputPort].connections.some(function (conn) {
+                return String(conn.node) === String(toId);
+            });
+
+            if (!created && window.console && window.console.warn) {
+                window.console.warn('MSF flow: could not create connection', edge.from, outputPort, '->', edge.to, inputPort);
+            }
+        });
+    }
+
+    function refreshFlowConnections() {
+        if (!editor) {
+            return;
+        }
+
+        Object.keys(getHomeData()).forEach(function (nodeId) {
+            editor.updateConnectionNodes('node-' + nodeId);
+        });
     }
 
     function addQuestionNode() {
@@ -879,7 +1189,11 @@
                 window.msfBuilderSync();
             }
 
-            window.setTimeout(renderFlow, 0);
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(function () {
+                    renderFlow();
+                });
+            });
             return;
         }
 
@@ -947,6 +1261,11 @@
         deleteSelectedNode();
     });
 
+    $inspector.on('click', '.msf-flow-center-node', function (event) {
+        event.preventDefault();
+        centerOnSelectedNode();
+    });
+
     $('#msf-flow-add-question').on('click', function (event) {
         event.preventDefault();
         addQuestionNode();
@@ -960,6 +1279,11 @@
     $('#msf-flow-fit-view').on('click', function (event) {
         event.preventDefault();
         fitFlowToView();
+    });
+
+    $('#msf-flow-center-node').on('click', function (event) {
+        event.preventDefault();
+        centerOnSelectedNode();
     });
 
     $('#msf-flow-zoom-in').on('click', function (event) {

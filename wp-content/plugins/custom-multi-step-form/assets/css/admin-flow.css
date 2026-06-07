@@ -116,15 +116,22 @@
     cursor: move;
 }
 
+.msf-flow-canvas .drawflow svg {
+    z-index: 3;
+    overflow: visible !important;
+}
+
 .msf-flow-canvas .drawflow .connection {
     pointer-events: none;
 }
 
 .msf-flow-canvas .drawflow .connection .main-path {
     pointer-events: stroke;
+    stroke-width: 3px;
 }
 
 .msf-flow-canvas .drawflow .drawflow-node {
+    z-index: 2;
     min-width: 220px;
     max-width: 280px;
     border: 1px solid #c3c4c7;
@@ -145,6 +152,7 @@
 }
 
 .msf-flow-canvas .drawflow .drawflow-node.selected {
+    z-index: 4;
     border-color: #2271b1;
 }
 

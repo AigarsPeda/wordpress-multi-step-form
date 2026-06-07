@@ -2,11 +2,16 @@
     'use strict';
 
     var NODE_WIDTH = 260;
-    var NODE_HEIGHT = 110;
+    var NODE_HEIGHT = 150;
     var GAP_X = 120;
-    var GAP_Y = 90;
-    var ORIGIN_X = 180;
+    var GAP_Y = 100;
+    var START_X = 40;
+    var START_WIDTH = 220;
     var ORIGIN_Y = 40;
+
+    function columnX(depth) {
+        return START_X + START_WIDTH + GAP_X + (depth - 1) * (NODE_WIDTH + GAP_X);
+    }
 
     function hasPosition(node) {
         return typeof node.x === 'number' && typeof node.y === 'number';
@@ -70,6 +75,59 @@
         return depths;
     }
 
+    function findFirstStepNode(graph) {
+        var firstNode = null;
+        var edge;
+        var i;
+
+        for (i = 0; i < (graph.edges || []).length; i++) {
+            edge = graph.edges[i];
+
+            if (edge.from !== '__start__') {
+                continue;
+            }
+
+            graph.nodes.forEach(function (node) {
+                if (node.stepId === edge.to) {
+                    firstNode = node;
+                }
+            });
+        }
+
+        if (!firstNode && graph.nodes.length) {
+            firstNode = graph.nodes.slice().sort(function (a, b) {
+                return (a.index || 0) - (b.index || 0);
+            })[0];
+        }
+
+        return firstNode;
+    }
+
+    function positionStartNode(graph) {
+        var firstNode = findFirstStepNode(graph);
+        var minFirstX = columnX(1);
+
+        if (!firstNode) {
+            graph.start = graph.start || { x: START_X, y: ORIGIN_Y };
+            return graph;
+        }
+
+        if (hasPosition(firstNode) && firstNode.x < minFirstX) {
+            graph.nodes.forEach(function (node) {
+                if (hasPosition(node)) {
+                    node.x += minFirstX - firstNode.x;
+                }
+            });
+        }
+
+        graph.start = {
+            x: START_X,
+            y: hasPosition(firstNode) ? firstNode.y : ORIGIN_Y
+        };
+
+        return graph;
+    }
+
     function apply(graph) {
         if (!graph || !Array.isArray(graph.nodes)) {
             return graph;
@@ -78,10 +136,7 @@
         var allPositioned = graph.nodes.every(hasPosition);
 
         if (allPositioned) {
-            if (!graph.start) {
-                graph.start = { x: 40, y: 120 };
-            }
-            return graph;
+            return positionStartNode(graph);
         }
 
         var depths = computeDepths(graph);
@@ -111,21 +166,13 @@
 
             layer.forEach(function (node, layerIndex) {
                 if (!hasPosition(node)) {
-                    node.x = ORIGIN_X + (parseInt(depthKey, 10) - 1) * (NODE_WIDTH + GAP_X);
+                    node.x = columnX(parseInt(depthKey, 10));
                     node.y = ORIGIN_Y + layerIndex * (NODE_HEIGHT + GAP_Y);
                 }
             });
         });
 
-        if (!graph.start) {
-            var startLayerSize = (layers[1] || []).length;
-            graph.start = {
-                x: 40,
-                y: ORIGIN_Y + Math.max(0, Math.floor(startLayerSize / 2)) * (NODE_HEIGHT + GAP_Y)
-            };
-        }
-
-        return graph;
+        return positionStartNode(graph);
     }
 
     window.MsfFlowLayout = {

@@ -202,6 +202,8 @@ class MSF_Admin {
                 'flowSummaryHelp' => __('Summary is the final review step before submit.', 'custom-multi-step-form'),
                 'flowOutputsChanged' => __('Answer type changed. Re-open Flow view to refresh branch outputs if connections look wrong.', 'custom-multi-step-form'),
                 'flowCompileError' => __('Could not compile the flow. Check connections and try again.', 'custom-multi-step-form'),
+                'flowCenterNode'   => __('Center on step', 'custom-multi-step-form'),
+                'flowSelectNodeCenter' => __('Select a step node first.', 'custom-multi-step-form'),
                 'flowWarnings'   => __('Notes', 'custom-multi-step-form'),
                 'flowShowsWhen'  => __('Shows when', 'custom-multi-step-form'),
                 'flowAlways'     => __('Always shown', 'custom-multi-step-form'),
@@ -436,6 +438,9 @@ class MSF_Admin {
                 <button type="button" class="button button-secondary" id="msf-flow-zoom-out" title="<?php esc_attr_e('Zoom out', 'custom-multi-step-form'); ?>" aria-label="<?php esc_attr_e('Zoom out', 'custom-multi-step-form'); ?>">−</button>
                 <button type="button" class="button button-secondary" id="msf-flow-fit-view">
                     <?php esc_html_e('Fit to view', 'custom-multi-step-form'); ?>
+                </button>
+                <button type="button" class="button button-secondary" id="msf-flow-center-node">
+                    <?php esc_html_e('Center on step', 'custom-multi-step-form'); ?>
                 </button>
                 <button type="button" class="button button-secondary" id="msf-flow-zoom-in" title="<?php esc_attr_e('Zoom in', 'custom-multi-step-form'); ?>" aria-label="<?php esc_attr_e('Zoom in', 'custom-multi-step-form'); ?>">+</button>
             </div>
