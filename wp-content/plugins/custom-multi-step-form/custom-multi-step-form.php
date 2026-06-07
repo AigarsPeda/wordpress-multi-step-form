@@ -33,6 +33,7 @@ require_once MSF_PLUGIN_DIR . 'includes/class-msf-admin.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-admin-actions.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-submit.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-block.php';
+require_once MSF_PLUGIN_DIR . 'includes/class-msf-page-layout.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-plugin.php';
 
 function msf_plugin() {

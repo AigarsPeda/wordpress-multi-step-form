@@ -399,9 +399,48 @@
         addStep();
     });
 
+    $('#msf-open-json-file').on('click', function (e) {
+        e.preventDefault();
+        $('#msf-import-json-file').trigger('click');
+    });
+
+    $('#msf-import-json-file').on('change', function () {
+        var file = this.files && this.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        var reader = new FileReader();
+
+        reader.onload = function (event) {
+            var raw = event.target && event.target.result ? String(event.target.result) : '';
+
+            try {
+                JSON.parse(raw);
+                $('#msf-import-json').val(raw);
+                window.alert(msfAdmin.i18n.fileLoaded || 'JSON file loaded. Review below and click Apply to builder.');
+            } catch (err) {
+                window.alert(msfAdmin.i18n.importError || 'Invalid JSON.');
+            }
+        };
+
+        reader.onerror = function () {
+            window.alert(msfAdmin.i18n.fileReadError || 'Could not read the JSON file.');
+        };
+
+        reader.readAsText(file);
+        $(this).val('');
+    });
+
     $('#msf-import-config').on('click', function (e) {
         e.preventDefault();
         var raw = $('#msf-import-json').val();
+
+        if (!String(raw || '').trim()) {
+            window.alert(msfAdmin.i18n.importError || 'Invalid JSON.');
+            return;
+        }
 
         try {
             applyImportedConfig(JSON.parse(raw));

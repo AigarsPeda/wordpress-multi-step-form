@@ -53,6 +53,10 @@
     font-size: 12px;
 }
 
+.msf-import-json-file {
+    display: none;
+}
+
 .msf-form-preview-wrap {
     margin-top: 16px;
     padding: 16px;

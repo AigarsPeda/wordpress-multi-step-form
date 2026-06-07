@@ -25,6 +25,7 @@ class MSF_Form_Config {
                 'showProgressBar'      => true,
                 'stepTransitionMs'     => 400,
                 'customCss'            => '',
+                'pageCss'              => '',
             ),
             'pricing' => array(
                 'enabled'            => false,
@@ -85,6 +86,9 @@ class MSF_Form_Config {
         $config['pricing']['displayOn'] = $display_on;
         $config['settings']['customCss'] = self::sanitize_custom_css(
             isset($config['settings']['customCss']) ? $config['settings']['customCss'] : ''
+        );
+        $config['settings']['pageCss'] = self::sanitize_custom_css(
+            isset($config['settings']['pageCss']) ? $config['settings']['pageCss'] : ''
         );
 
         $config['schemaVersion'] = 3;
@@ -439,6 +443,26 @@ class MSF_Form_Config {
 
         return sprintf(
             '<style id="msf-form-custom-css-%1$s">%2$s</style>',
+            esc_attr((string) $form_id),
+            $css // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- sanitized CSS for trusted editors
+        );
+    }
+
+    /**
+     * @return string Style tag HTML or empty string.
+     */
+    public static function render_page_css_tag($form_id, $css) {
+        $form_id = absint($form_id);
+        $css     = self::sanitize_custom_css($css);
+
+        if ($css === '' || !$form_id) {
+            return '';
+        }
+
+        $css = apply_filters('msf_form_page_css', $css, $form_id);
+
+        return sprintf(
+            '<style id="msf-form-page-css-%1$s">%2$s</style>',
             esc_attr((string) $form_id),
             $css // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- sanitized CSS for trusted editors
         );

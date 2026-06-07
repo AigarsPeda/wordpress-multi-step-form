@@ -23,6 +23,10 @@
     font-size: 1.5rem;
 }
 
+.msf-form__body {
+    transition: min-height 0.25s ease;
+}
+
 .msf-form__progress {
     height: 4px;
     background: #e5e7eb;
@@ -66,6 +70,17 @@
     border-radius: var(--msf-radius);
     font: inherit;
     box-sizing: border-box;
+}
+
+.msf-form__input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.msf-form__input[type="number"]::-webkit-outer-spin-button,
+.msf-form__input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .msf-form__choice {

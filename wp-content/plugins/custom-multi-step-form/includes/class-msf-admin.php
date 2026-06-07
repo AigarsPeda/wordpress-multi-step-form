@@ -117,11 +117,14 @@ class MSF_Admin {
             'previewConfig' => MSF_Form_Config::get_public($post->ID),
             'i18n'          => array(
                 'dragHandle'     => __('Drag to reorder', 'custom-multi-step-form'),
-                'exportJson'     => __('Download JSON', 'custom-multi-step-form'),
-                'importJson'     => __('Import JSON', 'custom-multi-step-form'),
-                'importHelp'     => __('Paste exported JSON below, then click Import. Save the form to persist changes.', 'custom-multi-step-form'),
+                'openJsonFile'   => __('Load JSON file…', 'custom-multi-step-form'),
+                'importJson'     => __('JSON', 'custom-multi-step-form'),
+                'importHelp'     => __('Load a file or paste JSON below, then apply it to the builder. Click Update the form to save.', 'custom-multi-step-form'),
+                'importIntoBuilder' => __('Apply to builder', 'custom-multi-step-form'),
                 'importSuccess'  => __('Configuration imported. Review the steps and click Update to save.', 'custom-multi-step-form'),
                 'importError'    => __('Invalid JSON. Expected an object with a steps array.', 'custom-multi-step-form'),
+                'fileReadError'  => __('Could not read the JSON file.', 'custom-multi-step-form'),
+                'fileLoaded'     => __('JSON file loaded. Review below and click Apply to builder.', 'custom-multi-step-form'),
                 'previewNote'    => __('Preview only — submissions are disabled here.', 'custom-multi-step-form'),
                 'step'           => __('Step', 'custom-multi-step-form'),
                 'stepTitle'      => __('Step title (optional)', 'custom-multi-step-form'),
@@ -288,6 +291,22 @@ class MSF_Admin {
                     </p>
                 </td>
             </tr>
+            <tr>
+                <th><label for="msf_page_css"><?php esc_html_e('Page layout CSS', 'custom-multi-step-form'); ?></label></th>
+                <td>
+                    <textarea class="large-text code msf-page-css-field" rows="12" id="msf_page_css" name="msf_page_css" spellcheck="false"><?php echo esc_textarea($settings['pageCss']); ?></textarea>
+                    <p class="description">
+                        <?php esc_html_e('Optional CSS for the page that contains this form (footer position, centering). The page body gets class', 'custom-multi-step-form'); ?>
+                        <code>has-msf-form</code>
+                        <?php esc_html_e('and', 'custom-multi-step-form'); ?>
+                        <code>has-msf-form-<?php echo esc_html($post->ID); ?></code>.
+                    </p>
+                    <p class="description">
+                        <?php esc_html_e('Avada starter (sticky footer, centered form):', 'custom-multi-step-form'); ?>
+                    </p>
+                    <pre class="msf-css-snippet" style="max-height:12em;overflow:auto;background:#f6f7f7;padding:0.75rem;border:1px solid #dcdcde;"><?php echo esc_html(MSF_Page_Layout::default_avada_page_css()); ?></pre>
+                </td>
+            </tr>
         </table>
         <?php
     }
@@ -309,17 +328,18 @@ class MSF_Admin {
     public function render_import_export_meta_box($post) {
         ?>
         <p>
-            <a class="button button-secondary" id="msf-export-config" href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?action=msf_export_form&post=' . $post->ID), 'msf_export_' . $post->ID)); ?>">
-                <?php esc_html_e('Download JSON', 'custom-multi-step-form'); ?>
-            </a>
-        </p>
-        <p class="description"><?php esc_html_e('Export includes settings, pricing, and steps.', 'custom-multi-step-form'); ?></p>
-        <p>
-            <label for="msf-import-json"><strong><?php esc_html_e('Import JSON', 'custom-multi-step-form'); ?></strong></label>
-            <textarea id="msf-import-json" class="large-text code" rows="8" placeholder="<?php esc_attr_e('Paste exported form JSON…', 'custom-multi-step-form'); ?>"></textarea>
+            <input type="file" id="msf-import-json-file" class="msf-import-json-file" accept=".json,application/json,text/json" hidden>
+            <button type="button" class="button button-secondary" id="msf-open-json-file">
+                <?php esc_html_e('Load JSON file…', 'custom-multi-step-form'); ?>
+            </button>
         </p>
         <p>
-            <button type="button" class="button" id="msf-import-config"><?php esc_html_e('Import into builder', 'custom-multi-step-form'); ?></button>
+            <label for="msf-import-json"><strong><?php esc_html_e('JSON', 'custom-multi-step-form'); ?></strong></label>
+        </p>
+        <textarea id="msf-import-json" class="large-text code" rows="8" placeholder="<?php esc_attr_e('Paste form JSON here, or use Load JSON file…', 'custom-multi-step-form'); ?>"></textarea>
+        <p class="description"><?php esc_html_e('Load a file or paste JSON above, then apply it to the builder. Click Update the form to save.', 'custom-multi-step-form'); ?></p>
+        <p>
+            <button type="button" class="button button-primary" id="msf-import-config"><?php esc_html_e('Apply to builder', 'custom-multi-step-form'); ?></button>
         </p>
         <?php
     }
@@ -429,6 +449,9 @@ class MSF_Admin {
         $existing['settings']['stepTransitionMs']     = isset($_POST['msf_step_transition_ms']) ? absint($_POST['msf_step_transition_ms']) : 400;
         $existing['settings']['customCss']          = isset($_POST['msf_custom_css'])
             ? MSF_Form_Config::sanitize_custom_css(wp_unslash($_POST['msf_custom_css']))
+            : '';
+        $existing['settings']['pageCss']            = isset($_POST['msf_page_css'])
+            ? MSF_Form_Config::sanitize_custom_css(wp_unslash($_POST['msf_page_css']))
             : '';
 
         $existing['pricing']['enabled']            = !empty($_POST['msf_pricing_enabled']);

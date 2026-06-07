@@ -348,6 +348,7 @@
         this.answers = {};
         this.fileAnswers = {};
         this.datePickers = [];
+        this.bodyQuestionMinHeight = 0;
         this.isSubmitting = false;
         this.isPreview = root.getAttribute('data-msf-preview') === '1';
         this.i18n = parseJson(root.getAttribute('data-msf-i18n'), null)
@@ -449,8 +450,22 @@
             return;
         }
 
+        var self = this;
+
         this.currentStepId = first.id;
-        this.renderStep();
+
+        var start = function () {
+            self.precomputeBodyMinHeight();
+            self.renderStep();
+        };
+
+        if (this.body.offsetWidth) {
+            start();
+        } else if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(start);
+        } else {
+            window.setTimeout(start, 0);
+        }
     };
 
     MSForm.prototype.updateProgress = function () {
@@ -743,43 +758,107 @@
         this.datePickers.push(picker);
     };
 
-    MSForm.prototype.renderStep = function () {
-        var step = this.getCurrentStep();
-        var settings = this.config.settings || {};
-        var self = this;
-        var transitionMs = this.getTransitionMs();
-        var activeFieldWrap = null;
-        var activeQuestion = null;
+    MSForm.prototype.clearBodyMinHeight = function () {
+        this.bodyQuestionMinHeight = 0;
 
-        if (!step) {
-            this.body.innerHTML = '';
+        if (this.body) {
+            this.body.style.minHeight = '';
+        }
+    };
+
+    MSForm.prototype.getQuestionStepsForMeasure = function () {
+        return getVisibleSteps(this.config.steps, this.answers).filter(function (step) {
+            return step.type !== 'summary';
+        });
+    };
+
+    MSForm.prototype.measureStepPanelHeight = function (panel) {
+        this.body.appendChild(panel);
+        var height = panel.offsetHeight;
+        this.body.removeChild(panel);
+        return height;
+    };
+
+    MSForm.prototype.precomputeBodyMinHeight = function () {
+        if (!this.body || !this.config || !this.config.steps || !this.config.steps.length) {
             return;
         }
 
-        this.destroyDatePickers();
-        this.body.innerHTML = '';
-        this.updateProgress();
-        this.updatePriceBar();
+        var questionSteps = this.getQuestionStepsForMeasure();
+        var max = 0;
+        var self = this;
 
-        var panel = el('div', {
-            className: 'msf-form__step msf-form__step--enter',
-            role: 'group',
-            'aria-live': 'polite'
+        questionSteps.forEach(function (step, index) {
+            var panel = self.buildStepPanel(step, {
+                showBack: index > 0,
+                isLast: false,
+                interactive: false
+            });
+
+            max = Math.max(max, self.measureStepPanelHeight(panel));
         });
+
+        this.bodyQuestionMinHeight = max;
+
+        if (max > 0) {
+            this.body.style.minHeight = max + 'px';
+        }
+    };
+
+    MSForm.prototype.applyStepBodyHeight = function (panel, step) {
+        if (!this.body || !panel) {
+            return;
+        }
+
+        if (step && step.type !== 'summary' && panel.offsetHeight > (this.bodyQuestionMinHeight || 0)) {
+            this.bodyQuestionMinHeight = panel.offsetHeight;
+        }
+
+        var height = this.bodyQuestionMinHeight || panel.offsetHeight;
+
+        if (step && step.type === 'summary') {
+            height = Math.max(height, panel.offsetHeight);
+        }
+
+        if (height > 0) {
+            this.body.style.minHeight = height + 'px';
+        }
+    };
+
+    MSForm.prototype.buildStepPanel = function (step, options) {
+        options = options || {};
+        var showBack = !!options.showBack;
+        var isLast = !!options.isLast;
+        var interactive = options.interactive !== false;
+        var settings = this.config.settings || {};
+
+        var panelAttrs = { className: 'msf-form__step' };
+
+        if (interactive) {
+            panelAttrs.role = 'group';
+            panelAttrs['aria-live'] = 'polite';
+        }
+
+        var panel = el('div', panelAttrs);
 
         if (step.type === 'summary') {
             this.renderSummary(panel);
-        } else {
+        } else if (step.questions && step.questions[0]) {
             var question = step.questions[0];
-            var stepTitleId = step.title ? this.fieldInputId(step.id, 'title') : '';
+            var stepTitleId = step.title && interactive ? this.fieldInputId(step.id, 'title') : '';
 
             if (step.title) {
-                panel.appendChild(el('h3', {
-                    className: 'msf-form__step-title',
-                    id: stepTitleId,
-                    text: step.title
-                }));
-                panel.setAttribute('aria-labelledby', stepTitleId);
+                var titleAttrs = { className: 'msf-form__step-title', text: step.title };
+
+                if (stepTitleId) {
+                    titleAttrs.id = stepTitleId;
+                }
+
+                panel.appendChild(el('h3', titleAttrs));
+
+                if (stepTitleId) {
+                    panel.setAttribute('aria-labelledby', stepTitleId);
+                }
             }
 
             if (step.description) {
@@ -813,73 +892,117 @@
                 panel.appendChild(fieldWrap);
             }
 
-            if (!step.title && question.label) {
+            if (interactive && !step.title && question.label) {
                 panel.setAttribute('aria-label', question.label);
             }
 
-            activeFieldWrap = fieldWrap;
-            activeQuestion = question;
-
-            if (this.config.pricing && this.config.pricing.enabled) {
-                fieldWrap.addEventListener('input', function () {
-                    self.updatePriceBar();
-                });
-                fieldWrap.addEventListener('change', function () {
-                    self.updatePriceBar();
-                });
-            }
+            panel._msfFieldWrap = fieldWrap;
+            panel._msfQuestion = question;
         }
 
         var actions = el('div', { className: 'msf-form__actions' });
 
-        if (this.history.length > 0) {
+        if (showBack) {
             actions.appendChild(el('button', {
                 type: 'button',
                 className: 'msf-form__btn msf-form__btn--secondary',
                 text: settings.backLabel || 'Atpakaļ'
             }));
-            actions.lastChild.addEventListener('click', function () {
-                self.goBack();
-            });
         }
+
+        actions.appendChild(el('button', {
+            type: 'button',
+            className: 'msf-form__btn msf-form__btn--primary',
+            text: isLast ? (settings.submitLabel || 'Nosūtīt') : (settings.nextLabel || 'Tālāk')
+        }));
+
+        panel.appendChild(actions);
+
+        return panel;
+    };
+
+    MSForm.prototype.renderStep = function () {
+        var step = this.getCurrentStep();
+        var self = this;
+        var transitionMs = this.getTransitionMs();
+
+        if (!step) {
+            this.body.innerHTML = '';
+            return;
+        }
+
+        this.destroyDatePickers();
+        this.body.innerHTML = '';
+        this.updateProgress();
+        this.updatePriceBar();
 
         var steps = this.getVisibleSteps();
         var currentIndex = steps.findIndex(function (item) { return item.id === step.id; });
         var isLast = currentIndex >= steps.length - 1;
-        var question = step.type === 'summary' ? null : step.questions[0];
-        var nextBtn = el('button', {
-            type: 'button',
-            className: 'msf-form__btn msf-form__btn--primary',
-            text: isLast ? (settings.submitLabel || 'Nosūtīt') : (settings.nextLabel || 'Tālāk')
+        var panel = this.buildStepPanel(step, {
+            showBack: this.history.length > 0,
+            isLast: isLast,
+            interactive: true
         });
 
-        nextBtn.addEventListener('click', function () {
-            if (self.isSubmitting) {
-                return;
-            }
+        panel.classList.add('msf-form__step--enter');
 
-            if (question && !self.validateCurrent(question)) {
-                return;
-            }
+        var activeFieldWrap = panel._msfFieldWrap || null;
+        var activeQuestion = panel._msfQuestion || null;
 
-            if (question) {
-                self.collectCurrent(question);
-            }
+        delete panel._msfFieldWrap;
+        delete panel._msfQuestion;
 
-            if (isLast) {
-                self.submit(nextBtn);
-                return;
-            }
+        var actions = panel.querySelector('.msf-form__actions');
+        var backBtn = actions ? actions.querySelector('.msf-form__btn--secondary') : null;
 
-            self.goNext(step);
-        });
+        if (backBtn) {
+            backBtn.addEventListener('click', function () {
+                self.goBack();
+            });
+        }
 
-        actions.appendChild(nextBtn);
-        panel.appendChild(actions);
+        var question = step.type === 'summary' ? null : (step.questions && step.questions[0]);
+        var nextBtn = actions ? actions.querySelector('.msf-form__btn--primary') : null;
+
+        if (activeQuestion && activeFieldWrap && this.config.pricing && this.config.pricing.enabled) {
+            activeFieldWrap.addEventListener('input', function () {
+                self.updatePriceBar();
+            });
+            activeFieldWrap.addEventListener('change', function () {
+                self.updatePriceBar();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (self.isSubmitting) {
+                    return;
+                }
+
+                if (question && !self.validateCurrent(question)) {
+                    return;
+                }
+
+                if (question) {
+                    self.collectCurrent(question);
+                }
+
+                if (isLast) {
+                    self.submit(nextBtn);
+                    return;
+                }
+
+                self.goNext(step);
+            });
+        }
+
         this.body.appendChild(panel);
+        this.applyStepBodyHeight(panel, step);
 
         if (activeQuestion && activeQuestion.type === 'date' && activeFieldWrap) {
             this.initDateField(activeFieldWrap, activeQuestion);
+            this.applyStepBodyHeight(panel, step);
         }
 
         window.setTimeout(function () {
@@ -1115,6 +1238,8 @@
             } else {
                 step.appendChild(errorEl);
             }
+
+            this.applyStepBodyHeight(step, this.getCurrentStep());
         }
 
         if (question) {
@@ -1293,6 +1418,8 @@
             } else {
                 step.appendChild(errorEl);
             }
+
+            this.applyStepBodyHeight(step, this.getCurrentStep());
         }
 
         errorEl.focus();
@@ -1306,6 +1433,7 @@
         var originalText = primaryBtn ? primaryBtn.textContent : '';
 
         if (this.isPreview) {
+            this.clearBodyMinHeight();
             this.body.innerHTML = '<div class="msf-form__success"><p>' + (this.i18n.previewSubmit || 'Priekšskatījums — nosūtīšana atspējota.') + '</p></div>';
             return;
         }
@@ -1375,6 +1503,7 @@
                 }
 
                 var message = getPayloadMessage(payload, fallbackSuccess);
+                self.clearBodyMinHeight();
                 self.body.innerHTML = '<div class="msf-form__success"><p>' + message + '</p></div>';
             })
             .catch(function (error) {

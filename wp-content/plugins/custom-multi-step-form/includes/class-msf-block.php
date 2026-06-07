@@ -209,11 +209,15 @@ class MSF_Block {
         $inline_styles = self::build_inline_styles($attributes);
         $wrapper_class = apply_filters('msf_form_wrapper_classes', array('msf-form'), $form_id, $attributes);
         $wrapper_class = is_array($wrapper_class) ? implode(' ', array_map('sanitize_html_class', $wrapper_class)) : 'msf-form';
-        $custom_css    = $full_config && !empty($full_config['settings']['customCss'])
+        $custom_css = $full_config && !empty($full_config['settings']['customCss'])
             ? $full_config['settings']['customCss']
+            : '';
+        $page_css   = $full_config && !empty($full_config['settings']['pageCss'])
+            ? $full_config['settings']['pageCss']
             : '';
 
         ob_start();
+        echo MSF_Form_Config::render_page_css_tag($form_id, $page_css); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo MSF_Form_Config::render_custom_css_tag($form_id, $custom_css); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         include MSF_PLUGIN_DIR . 'templates/form-wrapper.php';
         return ob_get_clean();

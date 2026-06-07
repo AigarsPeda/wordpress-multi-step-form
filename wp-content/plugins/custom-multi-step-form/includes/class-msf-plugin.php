@@ -23,6 +23,9 @@ class MSF_Plugin {
     /** @var MSF_Block */
     public $block;
 
+    /** @var MSF_Page_Layout */
+    public $page_layout;
+
     public static function instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -36,8 +39,9 @@ class MSF_Plugin {
         $this->settings = new MSF_Settings();
         $this->admin    = new MSF_Admin();
         new MSF_Admin_Actions();
-        $this->submit   = new MSF_Submit();
-        $this->block    = new MSF_Block();
+        $this->submit      = new MSF_Submit();
+        $this->block       = new MSF_Block();
+        $this->page_layout = new MSF_Page_Layout();
 
         add_action('current_screen', array('MSF_Seeder', 'maybe_seed_sample_form'));
         add_action('admin_notices', array('MSF_Seeder', 'render_empty_forms_notice'));
