@@ -3,6 +3,22 @@
 
     var SCENARIO_CAP = 48;
 
+    function findOptionIndex(question, value) {
+        if (!question || !question.options) {
+            return -1;
+        }
+
+        var i;
+
+        for (i = 0; i < question.options.length; i++) {
+            if (String(question.options[i].value) === String(value)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     function findStepByQuestionId(steps, questionId) {
         var i;
 
@@ -403,8 +419,164 @@
         };
     }
 
+    function countOutputsForStep(step) {
+        var question = step && step.questions ? step.questions[0] : null;
+        var count = 1;
+
+        if (!step || step.type === 'summary') {
+            return 0;
+        }
+
+        if (question && (question.type === 'radio' || question.type === 'checkbox') && question.options && question.options.length) {
+            count += question.options.length;
+        }
+
+        return count;
+    }
+
+    function findStepById(steps, stepId) {
+        var i;
+
+        for (i = 0; i < steps.length; i++) {
+            if (steps[i].id === stepId) {
+                return steps[i];
+            }
+        }
+
+        return null;
+    }
+
+    function allocateOutputPort(fromStepId, toStepId, steps, portUsage) {
+        var step = findStepById(steps, fromStepId);
+        var maxPorts = countOutputsForStep(step);
+        var port;
+        var p;
+
+        if (!portUsage[fromStepId]) {
+            portUsage[fromStepId] = {};
+        }
+
+        for (p = 1; p <= Math.max(1, maxPorts); p++) {
+            port = 'output_' + p;
+
+            if (!portUsage[fromStepId][port]) {
+                portUsage[fromStepId][port] = toStepId;
+                return port;
+            }
+        }
+
+        port = 'output_1';
+        portUsage[fromStepId][port] = toStepId;
+
+        return port;
+    }
+
+    function decompileForEditor(steps, flowLayout) {
+        var graph = decompile(steps, flowLayout);
+        var editableEdges = [];
+        var seen = {};
+        var portUsage = {};
+        var key;
+
+        graph.edges.forEach(function (edge) {
+            if (edge.from === '__start__' || edge.kind === 'start') {
+                return;
+            }
+
+            if (edge.kind !== 'condition' || !edge.condition) {
+                return;
+            }
+
+            var sourceStep = findStepByQuestionId(steps, edge.condition.questionId);
+            var question = sourceStep && sourceStep.questions ? sourceStep.questions[0] : null;
+            var optIndex = findOptionIndex(question, edge.condition.value);
+            var port = optIndex >= 0 ? 'output_' + (optIndex + 2) : allocateOutputPort(edge.from, edge.to, steps, portUsage);
+
+            if (!portUsage[edge.from]) {
+                portUsage[edge.from] = {};
+            }
+
+            if (portUsage[edge.from][port] && portUsage[edge.from][port] !== edge.to) {
+                port = allocateOutputPort(edge.from, edge.to, steps, portUsage);
+            }
+
+            key = edge.from + '->' + edge.to + ':' + port;
+
+            if (!seen[key]) {
+                seen[key] = true;
+                portUsage[edge.from][port] = edge.to;
+                editableEdges.push({
+                    from: edge.from,
+                    to: edge.to,
+                    outputPort: port,
+                    label: edge.label
+                });
+            }
+        });
+
+        graph.edges.forEach(function (edge) {
+            if (edge.from === '__start__' || edge.kind === 'start' || edge.kind === 'condition') {
+                return;
+            }
+
+            if (edge.kind !== 'runtime' && edge.kind !== 'linear' && edge.kind !== 'advanced') {
+                return;
+            }
+
+            var port = allocateOutputPort(edge.from, edge.to, steps, portUsage);
+
+            key = edge.from + '->' + edge.to + ':' + port;
+
+            if (!seen[key]) {
+                seen[key] = true;
+                editableEdges.push({
+                    from: edge.from,
+                    to: edge.to,
+                    outputPort: port,
+                    label: edge.label || 'next'
+                });
+            }
+        });
+
+        graph.nodes.forEach(function (node) {
+            var fullStep = null;
+            var s;
+
+            for (s = 0; s < steps.length; s++) {
+                if (steps[s].id === node.stepId) {
+                    fullStep = steps[s];
+                    break;
+                }
+            }
+
+            node.step = fullStep;
+        });
+
+        if (steps.length) {
+            key = '__start__->' + steps[0].id + ':output_1';
+
+            if (!seen[key]) {
+                editableEdges.unshift({
+                    from: '__start__',
+                    to: steps[0].id,
+                    outputPort: 'output_1',
+                    label: ''
+                });
+            }
+        }
+
+        return {
+            nodes: graph.nodes,
+            edges: editableEdges,
+            warnings: graph.warnings,
+            start: graph.start
+        };
+    }
+
     window.MsfFlowDecompiler = {
         decompile: decompile,
-        formatCondition: formatCondition
+        decompileForEditor: decompileForEditor,
+        formatCondition: formatCondition,
+        findOptionIndex: findOptionIndex
     };
 }(window));

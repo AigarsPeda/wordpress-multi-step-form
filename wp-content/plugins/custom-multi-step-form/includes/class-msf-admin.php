@@ -129,9 +129,17 @@ class MSF_Admin {
         );
 
         wp_enqueue_script(
+            'msf-admin-flow-compiler',
+            MSF_PLUGIN_URL . 'assets/js/admin-flow-compiler.js',
+            array(),
+            msf_plugin()->get_asset_version('assets/js/admin-flow-compiler.js'),
+            true
+        );
+
+        wp_enqueue_script(
             'msf-admin-flow',
             MSF_PLUGIN_URL . 'assets/js/admin-flow.js',
-            array('jquery', 'drawflow', 'msf-admin-flow-layout', 'msf-admin-builder'),
+            array('jquery', 'drawflow', 'msf-admin-flow-layout', 'msf-admin-flow-compiler', 'msf-admin-builder'),
             msf_plugin()->get_asset_version('assets/js/admin-flow.js'),
             true
         );
@@ -179,10 +187,21 @@ class MSF_Admin {
             'i18n'          => array(
                 'flowView'       => __('Flow view', 'custom-multi-step-form'),
                 'listView'       => __('List view', 'custom-multi-step-form'),
-                'flowReadOnly'   => __('Read-only diagram (Phase 1). Nodes cannot be moved yet — drag the canvas background to pan. Edit steps in List view.', 'custom-multi-step-form'),
+                'flowReadOnly'   => __('Drag nodes to rearrange. Connect outputs to the next step. Top output = default next; lower outputs = answer branches (radio/checkbox).', 'custom-multi-step-form'),
                 'flowStart'      => __('Start', 'custom-multi-step-form'),
                 'flowStartHelp'  => __('Form begins here', 'custom-multi-step-form'),
                 'flowEmpty'      => __('Add steps in List view to see the flow diagram.', 'custom-multi-step-form'),
+                'flowEmptyEditable' => __('Use Add question to create your first step, then connect it from Start.', 'custom-multi-step-form'),
+                'flowAddQuestion' => __('Add question', 'custom-multi-step-form'),
+                'flowAddSummary'  => __('Add summary', 'custom-multi-step-form'),
+                'flowSelectNode'  => __('Select a step node to edit its settings.', 'custom-multi-step-form'),
+                'flowDeleteNode'  => __('Delete step', 'custom-multi-step-form'),
+                'flowOptional'    => __('optional', 'custom-multi-step-form'),
+                'flowUntitled'    => __('Untitled step', 'custom-multi-step-form'),
+                'flowBranchHelp'  => __('Connect the top output for the default next step. Connect lower outputs for each answer branch.', 'custom-multi-step-form'),
+                'flowSummaryHelp' => __('Summary is the final review step before submit.', 'custom-multi-step-form'),
+                'flowOutputsChanged' => __('Answer type changed. Re-open Flow view to refresh branch outputs if connections look wrong.', 'custom-multi-step-form'),
+                'flowCompileError' => __('Could not compile the flow. Check connections and try again.', 'custom-multi-step-form'),
                 'flowWarnings'   => __('Notes', 'custom-multi-step-form'),
                 'flowShowsWhen'  => __('Shows when', 'custom-multi-step-form'),
                 'flowAlways'     => __('Always shown', 'custom-multi-step-form'),
@@ -406,12 +425,32 @@ class MSF_Admin {
         </div>
 
         <div id="msf-steps-flow-view" hidden>
-            <div id="msf-flow-canvas" class="msf-flow-canvas" aria-label="<?php esc_attr_e('Form flow diagram', 'custom-multi-step-form'); ?>"></div>
+            <div class="msf-flow-toolbar">
+                <button type="button" class="button button-secondary" id="msf-flow-add-question">
+                    <?php esc_html_e('Add question', 'custom-multi-step-form'); ?>
+                </button>
+                <button type="button" class="button button-secondary" id="msf-flow-add-summary">
+                    <?php esc_html_e('Add summary', 'custom-multi-step-form'); ?>
+                </button>
+                <span class="msf-flow-toolbar__spacer" aria-hidden="true"></span>
+                <button type="button" class="button button-secondary" id="msf-flow-zoom-out" title="<?php esc_attr_e('Zoom out', 'custom-multi-step-form'); ?>" aria-label="<?php esc_attr_e('Zoom out', 'custom-multi-step-form'); ?>">−</button>
+                <button type="button" class="button button-secondary" id="msf-flow-fit-view">
+                    <?php esc_html_e('Fit to view', 'custom-multi-step-form'); ?>
+                </button>
+                <button type="button" class="button button-secondary" id="msf-flow-zoom-in" title="<?php esc_attr_e('Zoom in', 'custom-multi-step-form'); ?>" aria-label="<?php esc_attr_e('Zoom in', 'custom-multi-step-form'); ?>">+</button>
+            </div>
+            <div class="msf-flow-workspace">
+                <div id="msf-flow-canvas" class="msf-flow-canvas" aria-label="<?php esc_attr_e('Form flow diagram', 'custom-multi-step-form'); ?>"></div>
+                <aside id="msf-flow-inspector" class="msf-flow-inspector" aria-label="<?php esc_attr_e('Step properties', 'custom-multi-step-form'); ?>">
+                    <p class="msf-flow-inspector__empty"><?php esc_html_e('Select a step node to edit its settings.', 'custom-multi-step-form'); ?></p>
+                </aside>
+            </div>
             <div id="msf-flow-warnings" class="msf-flow-warnings" hidden></div>
-            <p class="description msf-flow-help"><?php esc_html_e('Read-only diagram (Phase 1). Nodes cannot be moved yet — drag the canvas background to pan. Edit steps in List view.', 'custom-multi-step-form'); ?></p>
+            <p class="description msf-flow-help"><?php esc_html_e('Drag nodes to rearrange. Connect outputs to the next step. Top output = default next; lower outputs = answer branches (radio/checkbox). Pan the canvas by dragging empty space, holding Space while dragging, or using the middle mouse button. Scroll to zoom, or use Fit to view.', 'custom-multi-step-form'); ?></p>
         </div>
 
         <input type="hidden" id="msf_steps_json" name="msf_steps_json" value="<?php echo esc_attr(wp_json_encode($config['steps'], JSON_UNESCAPED_UNICODE)); ?>">
+        <input type="hidden" id="msf_flow_layout_json" name="msf_flow_layout_json" value="<?php echo esc_attr(wp_json_encode(isset($config['flowLayout']) ? $config['flowLayout'] : array('version' => 1, 'nodes' => array()), JSON_UNESCAPED_UNICODE)); ?>">
         <?php
     }
 
@@ -561,6 +600,14 @@ class MSF_Admin {
 
             if (is_array($decoded)) {
                 $steps = $decoded;
+            }
+        }
+
+        if (isset($_POST['msf_flow_layout_json'])) {
+            $layout = json_decode(wp_unslash($_POST['msf_flow_layout_json']), true);
+
+            if (is_array($layout)) {
+                $existing['flowLayout'] = $layout;
             }
         }
 

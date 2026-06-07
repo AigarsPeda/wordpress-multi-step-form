@@ -3,6 +3,13 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     margin: 0 0 1rem;
+    position: relative;
+    z-index: 20;
+}
+
+.msf-builder-tabs .msf-builder-tab {
+    position: relative;
+    z-index: 21;
 }
 
 .msf-builder-tab.is-active {
@@ -11,11 +18,72 @@
     color: #fff;
 }
 
+.msf-flow-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.msf-flow-toolbar__spacer {
+    flex: 1 1 auto;
+    min-width: 0.5rem;
+}
+
+.msf-flow-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.msf-flow-inspector {
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
+    background: #fff;
+    padding: 1rem;
+    min-height: 420px;
+    max-height: 60vh;
+    overflow: auto;
+}
+
+.msf-flow-inspector__empty {
+    margin: 0;
+    color: #646970;
+}
+
+.msf-flow-node__ports {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #dcdcde;
+}
+
+.msf-flow-node__port {
+    font-size: 10px;
+    line-height: 1.4;
+    color: #646970;
+}
+
+.msf-flow-node__port + .msf-flow-node__port {
+    margin-top: 0.15rem;
+}
+
+@media (max-width: 960px) {
+    .msf-flow-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .msf-flow-inspector {
+        max-height: none;
+    }
+}
+
 .msf-flow-canvas {
     width: 100%;
-    min-height: 420px;
-    height: 60vh;
-    max-height: 720px;
+    min-height: 480px;
+    height: 65vh;
+    max-height: 820px;
     border: 1px solid #c3c4c7;
     border-radius: 8px;
     background:
@@ -25,9 +93,35 @@
     overflow: hidden;
 }
 
+.msf-flow-canvas.msf-flow-canvas--space-pan,
+.msf-flow-canvas.msf-flow-canvas--panning {
+    cursor: grabbing;
+}
+
 .msf-flow-canvas .drawflow {
     width: 100%;
     height: 100%;
+    position: relative;
+    z-index: 1;
+    background: transparent;
+    cursor: grab;
+}
+
+.msf-flow-canvas.msf-flow-canvas--panning .drawflow,
+.msf-flow-canvas.msf-flow-canvas--space-pan .drawflow {
+    cursor: grabbing;
+}
+
+.msf-flow-canvas .drawflow .drawflow-node {
+    cursor: move;
+}
+
+.msf-flow-canvas .drawflow .connection {
+    pointer-events: none;
+}
+
+.msf-flow-canvas .drawflow .connection .main-path {
+    pointer-events: stroke;
 }
 
 .msf-flow-canvas .drawflow .drawflow-node {

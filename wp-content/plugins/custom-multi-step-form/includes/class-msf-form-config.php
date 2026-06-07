@@ -95,8 +95,40 @@ class MSF_Form_Config {
         $config['steps']         = self::normalize_steps(
             isset($config['steps']) && is_array($config['steps']) ? $config['steps'] : array()
         );
+        $config['flowLayout']    = self::normalize_flow_layout(
+            isset($config['flowLayout']) ? $config['flowLayout'] : null
+        );
 
         return $config;
+    }
+
+    private static function normalize_flow_layout($flow_layout) {
+        if (!is_array($flow_layout) || empty($flow_layout['nodes']) || !is_array($flow_layout['nodes'])) {
+            return null;
+        }
+
+        $nodes = array();
+
+        foreach ($flow_layout['nodes'] as $node) {
+            if (!is_array($node) || empty($node['stepId'])) {
+                continue;
+            }
+
+            $nodes[] = array(
+                'stepId' => sanitize_key($node['stepId']),
+                'x'      => isset($node['x']) ? floatval($node['x']) : 0,
+                'y'      => isset($node['y']) ? floatval($node['y']) : 0,
+            );
+        }
+
+        if (empty($nodes)) {
+            return null;
+        }
+
+        return array(
+            'version' => 1,
+            'nodes'   => $nodes,
+        );
     }
 
     private static function normalize_steps($steps) {

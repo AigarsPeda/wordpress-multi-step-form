@@ -527,6 +527,31 @@
 
     window.msfBuilderSync = syncHidden;
 
+    window.msfBuilderRenderFromSteps = function (steps) {
+        if (!Array.isArray(steps)) {
+            return;
+        }
+
+        initialSteps = steps.slice();
+        $builder.empty();
+        stepIndex = 0;
+
+        if (!steps.length) {
+            syncHidden();
+            refreshAdminPreview([]);
+            return;
+        }
+
+        steps.forEach(function (step, index) {
+            $builder.append(buildStepCard(step, index));
+            stepIndex = index + 1;
+        });
+
+        syncHidden();
+        initSortable();
+        refreshAdminPreview(steps);
+    };
+
     render(parseInitial());
 
     if (document.getElementById('msf-admin-preview') && typeof window.msfInitForm === 'function') {
