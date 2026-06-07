@@ -284,7 +284,7 @@ class MSF_Admin {
                     <p class="description">
                         <?php esc_html_e('Optional CSS for this form only. Scope rules to', 'custom-multi-step-form'); ?>
                         <code>#msf-form-<?php echo esc_html($post->ID); ?></code>
-                        <?php esc_html_e('or .msf-form. Variables: --msf-color-primary, --msf-radius, --msf-max-width.', 'custom-multi-step-form'); ?>
+                        <?php esc_html_e('or .msf-form. Variables: --msf-color-primary, --msf-color-text, --msf-color-text-muted, --msf-color-input-bg, --msf-color-border, --msf-radius, --msf-max-width, --msf-input-min-height.', 'custom-multi-step-form'); ?>
                     </p>
                     <p class="description">
                         <code>.msf-form { --msf-color-primary: #8b4513; --msf-max-width: 720px; }</code>

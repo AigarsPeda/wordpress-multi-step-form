@@ -1096,11 +1096,12 @@
                 wrap.querySelector('input').value = value || '';
                 break;
             case 'radio':
+                wrap.classList.add('msf-form__choices');
                 (question.options || []).forEach(function (option) {
                     var optionInputId = self.fieldInputId(question.id, option.value);
                     var label = el('label', {
                         className: 'msf-form__choice',
-                        html: '<input type="radio" id="' + optionInputId + '" name="' + question.id + '" value="' + option.value + '"> ' + option.label
+                        html: '<input type="radio" id="' + optionInputId + '" name="' + question.id + '" value="' + option.value + '"><span class="msf-form__choice-control" aria-hidden="true"></span><span class="msf-form__choice-text">' + option.label + '</span>'
                     });
                     if (value === option.value) {
                         label.querySelector('input').checked = true;
@@ -1109,11 +1110,12 @@
                 });
                 break;
             case 'checkbox':
+                wrap.classList.add('msf-form__choices');
                 (question.options || []).forEach(function (option) {
                     var optionInputId = self.fieldInputId(question.id, option.value);
                     var label = el('label', {
                         className: 'msf-form__choice',
-                        html: '<input type="checkbox" id="' + optionInputId + '" name="' + question.id + '[]" value="' + option.value + '"> ' + option.label
+                        html: '<input type="checkbox" id="' + optionInputId + '" name="' + question.id + '[]" value="' + option.value + '"><span class="msf-form__choice-control" aria-hidden="true"></span><span class="msf-form__choice-text">' + option.label + '</span>'
                     });
                     if (Array.isArray(value) && value.indexOf(option.value) !== -1) {
                         label.querySelector('input').checked = true;

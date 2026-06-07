@@ -43,8 +43,9 @@
 }
 
 .msf-form__date-shortcut {
-    padding: 0.45rem 0.75rem;
-    font-size: 0.875rem;
+    min-height: auto;
+    padding: 0.55rem 0.85rem;
+    font-size: var(--msf-text-sm, 0.875rem);
 }
 
 .msf-form__date-picker-wrap {
