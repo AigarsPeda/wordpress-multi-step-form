@@ -107,19 +107,34 @@ class MSF_Admin {
             true
         );
 
+        $config = MSF_Form_Config::get($post->ID);
+        $slug   = get_post_field('post_name', $post->ID);
+
+        if ($slug === '') {
+            $slug = 'msf-form-' . $post->ID;
+        }
+
         wp_localize_script('msf-admin-builder', 'msfAdmin', array(
             'formId'        => $post->ID,
+            'formTitle'     => get_the_title($post->ID),
+            'formSlug'      => sanitize_file_name($slug),
             'questionTypes' => MSF_Form_Config::QUESTION_TYPES,
             'exportUrl'     => wp_nonce_url(
                 admin_url('admin.php?action=msf_export_form&post=' . $post->ID),
                 'msf_export_' . $post->ID
             ),
+            'storedConfig'  => array(
+                'schemaVersion' => $config['schemaVersion'],
+                'settings'      => $config['settings'],
+                'pricing'       => $config['pricing'],
+            ),
             'previewConfig' => MSF_Form_Config::get_public($post->ID),
             'i18n'          => array(
                 'dragHandle'     => __('Drag to reorder', 'custom-multi-step-form'),
                 'openJsonFile'   => __('Load JSON file…', 'custom-multi-step-form'),
+                'exportJson'     => __('Export JSON', 'custom-multi-step-form'),
                 'importJson'     => __('JSON', 'custom-multi-step-form'),
-                'importHelp'     => __('Load a file or paste JSON below, then apply it to the builder. Click Update the form to save.', 'custom-multi-step-form'),
+                'importHelp'     => __('Load a file or paste JSON below, then apply it to the builder. Export downloads the current editor state (including unsaved changes). Click Update the form to save.', 'custom-multi-step-form'),
                 'importIntoBuilder' => __('Apply to builder', 'custom-multi-step-form'),
                 'importSuccess'  => __('Configuration imported. Review the steps and click Update to save.', 'custom-multi-step-form'),
                 'importError'    => __('Invalid JSON. Expected an object with a steps array.', 'custom-multi-step-form'),
@@ -332,12 +347,15 @@ class MSF_Admin {
             <button type="button" class="button button-secondary" id="msf-open-json-file">
                 <?php esc_html_e('Load JSON file…', 'custom-multi-step-form'); ?>
             </button>
+            <button type="button" class="button button-secondary" id="msf-export-config">
+                <?php esc_html_e('Export JSON', 'custom-multi-step-form'); ?>
+            </button>
         </p>
         <p>
             <label for="msf-import-json"><strong><?php esc_html_e('JSON', 'custom-multi-step-form'); ?></strong></label>
         </p>
         <textarea id="msf-import-json" class="large-text code" rows="8" placeholder="<?php esc_attr_e('Paste form JSON here, or use Load JSON file…', 'custom-multi-step-form'); ?>"></textarea>
-        <p class="description"><?php esc_html_e('Load a file or paste JSON above, then apply it to the builder. Click Update the form to save.', 'custom-multi-step-form'); ?></p>
+        <p class="description"><?php esc_html_e('Load a file or paste JSON above, then apply it to the builder. Export downloads the current editor state (including unsaved changes). Click Update the form to save.', 'custom-multi-step-form'); ?></p>
         <p>
             <button type="button" class="button button-primary" id="msf-import-config"><?php esc_html_e('Apply to builder', 'custom-multi-step-form'); ?></button>
         </p>

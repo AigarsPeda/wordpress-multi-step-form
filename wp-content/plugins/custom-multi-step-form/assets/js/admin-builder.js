@@ -217,6 +217,7 @@
             $('#msf_submit_label').val(config.settings.submitLabel || '');
             $('#msf_step_transition_ms').val(config.settings.stepTransitionMs || 400);
             $('#msf_custom_css').val(config.settings.customCss || '');
+            $('#msf_page_css').val(config.settings.pageCss || '');
         }
 
         if (config.pricing) {
@@ -359,6 +360,66 @@
         $hidden.val(JSON.stringify(collectSteps()));
     }
 
+    function collectSettings() {
+        var stored = (msfAdmin.storedConfig && msfAdmin.storedConfig.settings) || {};
+
+        return Object.assign({}, stored, {
+            ownerEmail: $('#msf_owner_email').val() || '',
+            successMessage: $('#msf_success_message').val() || '',
+            customerEmailSubject: $('#msf_customer_subject').val() || '',
+            customerEmailBody: $('#msf_customer_body').val() || '',
+            submitLabel: $('#msf_submit_label').val() || '',
+            stepTransitionMs: parseInt($('#msf_step_transition_ms').val(), 10) || 400,
+            customCss: $('#msf_custom_css').val() || '',
+            pageCss: $('#msf_page_css').val() || ''
+        });
+    }
+
+    function collectPricing() {
+        var stored = (msfAdmin.storedConfig && msfAdmin.storedConfig.pricing) || {};
+
+        return Object.assign({}, stored, {
+            enabled: $('input[name="msf_pricing_enabled"]').is(':checked'),
+            baseAmount: parseFloat($('#msf_pricing_base').val()) || 0,
+            perGuestRate: parseFloat($('#msf_pricing_per_guest').val()) || 0,
+            perGuestQuestionId: $('#msf_pricing_guest_question').val() || '',
+            displayOn: $('#msf_pricing_display').val() || 'summary',
+            currency: $('#msf_pricing_currency').val() || 'EUR'
+        });
+    }
+
+    function collectExportConfig() {
+        syncHidden();
+
+        var titleInput = document.getElementById('title');
+        var formTitle = titleInput && titleInput.value ? String(titleInput.value).trim() : (msfAdmin.formTitle || '');
+
+        return {
+            exportedAt: new Date().toISOString(),
+            formTitle: formTitle,
+            schemaVersion: (msfAdmin.storedConfig && msfAdmin.storedConfig.schemaVersion) || 3,
+            settings: collectSettings(),
+            pricing: collectPricing(),
+            steps: collectSteps()
+        };
+    }
+
+    function downloadExportConfig() {
+        var exportData = collectExportConfig();
+        var json = JSON.stringify(exportData, null, 2);
+        var blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        var filename = (msfAdmin.formSlug || ('msf-form-' + msfAdmin.formId)) + '.json';
+        var link = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
     $builder.on('input change', 'input, select, textarea', function () {
         var $card = $(this).closest('.msf-step-card');
 
@@ -402,6 +463,11 @@
     $('#msf-open-json-file').on('click', function (e) {
         e.preventDefault();
         $('#msf-import-json-file').trigger('click');
+    });
+
+    $('#msf-export-config').on('click', function (e) {
+        e.preventDefault();
+        downloadExportConfig();
     });
 
     $('#msf-import-json-file').on('change', function () {
