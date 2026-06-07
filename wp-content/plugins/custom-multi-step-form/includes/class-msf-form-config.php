@@ -420,6 +420,7 @@ class MSF_Form_Config {
         }
 
         $css = wp_unslash($css);
+        $css = html_entity_decode($css, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $css = wp_strip_all_tags($css);
         $css = preg_replace('/@import\b[^;]+;?/i', '', $css);
         $css = preg_replace('/javascript\s*:/i', '', $css);

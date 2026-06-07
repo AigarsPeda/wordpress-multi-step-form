@@ -14,6 +14,7 @@ class MSF_Block {
         add_action('init', array($this, 'register_block'));
         add_action('enqueue_block_editor_assets', array($this, 'enqueue_block_editor_assets'));
         add_action('wp_enqueue_scripts', array($this, 'register_front_assets'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_form_custom_styles'), 20);
     }
 
     public function enqueue_block_editor_assets() {
@@ -73,6 +74,51 @@ class MSF_Block {
                 'previewI18n' => MSF_I18n::runtime_strings(),
             )
         );
+    }
+
+    public function enqueue_form_custom_styles() {
+        if (!is_singular()) {
+            return;
+        }
+
+        $post = get_queried_object();
+
+        if (!$post || empty($post->post_content)) {
+            return;
+        }
+
+        $form_ids = MSF_Page_Layout::get_form_ids_for_post($post);
+
+        if (empty($form_ids)) {
+            return;
+        }
+
+        wp_enqueue_style('msf-form-runtime');
+
+        foreach ($form_ids as $form_id) {
+            $full_config = MSF_Form_Config::get($form_id);
+
+            if (!$full_config) {
+                continue;
+            }
+
+            $page_css   = isset($full_config['settings']['pageCss']) ? $full_config['settings']['pageCss'] : '';
+            $custom_css = isset($full_config['settings']['customCss']) ? $full_config['settings']['customCss'] : '';
+
+            if ($page_css !== '') {
+                wp_add_inline_style(
+                    'msf-form-runtime',
+                    MSF_Form_Config::sanitize_custom_css($page_css)
+                );
+            }
+
+            if ($custom_css !== '') {
+                wp_add_inline_style(
+                    'msf-form-runtime',
+                    MSF_Form_Config::sanitize_custom_css($custom_css)
+                );
+            }
+        }
     }
 
     public function register_front_assets() {
@@ -209,16 +255,7 @@ class MSF_Block {
         $inline_styles = self::build_inline_styles($attributes);
         $wrapper_class = apply_filters('msf_form_wrapper_classes', array('msf-form'), $form_id, $attributes);
         $wrapper_class = is_array($wrapper_class) ? implode(' ', array_map('sanitize_html_class', $wrapper_class)) : 'msf-form';
-        $custom_css = $full_config && !empty($full_config['settings']['customCss'])
-            ? $full_config['settings']['customCss']
-            : '';
-        $page_css   = $full_config && !empty($full_config['settings']['pageCss'])
-            ? $full_config['settings']['pageCss']
-            : '';
-
         ob_start();
-        echo MSF_Form_Config::render_page_css_tag($form_id, $page_css); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        echo MSF_Form_Config::render_custom_css_tag($form_id, $custom_css); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         include MSF_PLUGIN_DIR . 'templates/form-wrapper.php';
         return ob_get_clean();
     }

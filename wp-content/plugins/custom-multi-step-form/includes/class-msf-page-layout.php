@@ -90,10 +90,6 @@ body.has-msf-form #wrapper {
 
 body.has-msf-form #main {
   flex: 1 0 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  padding-top: 1.25rem;
   padding-bottom: 0 !important;
 }
 
@@ -104,17 +100,11 @@ body.has-msf-form #main #content {
 
 body.has-msf-form .fusion-footer {
   flex-shrink: 0;
-  margin-top: auto;
 }
 
 @media (min-width: 768px) {
   body.has-msf-form #main {
-    justify-content: center;
-    padding-top: 0;
-  }
-
-  body.has-msf-form .fusion-footer {
-    margin-top: 0;
+    padding-top: 50px;
   }
 }
 CSS;
