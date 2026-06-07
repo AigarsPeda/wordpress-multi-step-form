@@ -82,11 +82,57 @@ class MSF_Admin {
 
         wp_enqueue_script('jquery-ui-sortable');
 
+        wp_enqueue_style(
+            'drawflow',
+            MSF_PLUGIN_URL . 'assets/vendor/drawflow/drawflow.min.css',
+            array(),
+            '0.0.60'
+        );
+
+        wp_enqueue_style(
+            'msf-admin-flow',
+            MSF_PLUGIN_URL . 'assets/css/admin-flow.css',
+            array('drawflow', 'msf-admin'),
+            msf_plugin()->get_asset_version('assets/css/admin-flow.css')
+        );
+
+        wp_enqueue_script(
+            'drawflow',
+            MSF_PLUGIN_URL . 'assets/vendor/drawflow/drawflow.min.js',
+            array(),
+            '0.0.60',
+            true
+        );
+
+        wp_enqueue_script(
+            'msf-admin-flow-decompiler',
+            MSF_PLUGIN_URL . 'assets/js/admin-flow-decompiler.js',
+            array(),
+            msf_plugin()->get_asset_version('assets/js/admin-flow-decompiler.js'),
+            true
+        );
+
+        wp_enqueue_script(
+            'msf-admin-flow-layout',
+            MSF_PLUGIN_URL . 'assets/js/admin-flow-layout.js',
+            array('msf-admin-flow-decompiler'),
+            msf_plugin()->get_asset_version('assets/js/admin-flow-layout.js'),
+            true
+        );
+
         wp_enqueue_script(
             'msf-admin-builder',
             MSF_PLUGIN_URL . 'assets/js/admin-builder.js',
             array('jquery', 'jquery-ui-sortable'),
             msf_plugin()->get_asset_version('assets/js/admin-builder.js'),
+            true
+        );
+
+        wp_enqueue_script(
+            'msf-admin-flow',
+            MSF_PLUGIN_URL . 'assets/js/admin-flow.js',
+            array('jquery', 'drawflow', 'msf-admin-flow-layout', 'msf-admin-builder'),
+            msf_plugin()->get_asset_version('assets/js/admin-flow.js'),
             true
         );
 
@@ -128,8 +174,19 @@ class MSF_Admin {
                 'settings'      => $config['settings'],
                 'pricing'       => $config['pricing'],
             ),
+            'flowLayout'    => isset($config['flowLayout']) ? $config['flowLayout'] : null,
             'previewConfig' => MSF_Form_Config::get_public($post->ID),
             'i18n'          => array(
+                'flowView'       => __('Flow view', 'custom-multi-step-form'),
+                'listView'       => __('List view', 'custom-multi-step-form'),
+                'flowReadOnly'   => __('Read-only diagram (Phase 1). Nodes cannot be moved yet — drag the canvas background to pan. Edit steps in List view.', 'custom-multi-step-form'),
+                'flowStart'      => __('Start', 'custom-multi-step-form'),
+                'flowStartHelp'  => __('Form begins here', 'custom-multi-step-form'),
+                'flowEmpty'      => __('Add steps in List view to see the flow diagram.', 'custom-multi-step-form'),
+                'flowWarnings'   => __('Notes', 'custom-multi-step-form'),
+                'flowShowsWhen'  => __('Shows when', 'custom-multi-step-form'),
+                'flowAlways'     => __('Always shown', 'custom-multi-step-form'),
+                'flowAdvancedVisibility' => __('Advanced visibility rules', 'custom-multi-step-form'),
                 'dragHandle'     => __('Drag to reorder', 'custom-multi-step-form'),
                 'openJsonFile'   => __('Load JSON file…', 'custom-multi-step-form'),
                 'exportJson'     => __('Export JSON', 'custom-multi-step-form'),
@@ -329,13 +386,31 @@ class MSF_Admin {
     public function render_steps_meta_box($post) {
         $config = MSF_Form_Config::get($post->ID);
         ?>
-        <p class="description"><?php esc_html_e('Drag steps by the handle to reorder.', 'custom-multi-step-form'); ?></p>
-        <div id="msf-steps-builder" class="msf-steps-builder"></div>
-        <p>
-            <button type="button" class="button button-secondary" id="msf-add-step">
-                <?php esc_html_e('Add step', 'custom-multi-step-form'); ?>
+        <div class="msf-builder-tabs" role="tablist" aria-label="<?php esc_attr_e('Form step builder views', 'custom-multi-step-form'); ?>">
+            <button type="button" class="button msf-builder-tab is-active" data-msf-builder-view="list" role="tab" aria-selected="true">
+                <?php esc_html_e('List view', 'custom-multi-step-form'); ?>
             </button>
-        </p>
+            <button type="button" class="button msf-builder-tab" data-msf-builder-view="flow" role="tab" aria-selected="false">
+                <?php esc_html_e('Flow view', 'custom-multi-step-form'); ?>
+            </button>
+        </div>
+
+        <div id="msf-steps-list-view">
+            <p class="description"><?php esc_html_e('Drag steps by the handle to reorder.', 'custom-multi-step-form'); ?></p>
+            <div id="msf-steps-builder" class="msf-steps-builder"></div>
+            <p>
+                <button type="button" class="button button-secondary" id="msf-add-step">
+                    <?php esc_html_e('Add step', 'custom-multi-step-form'); ?>
+                </button>
+            </p>
+        </div>
+
+        <div id="msf-steps-flow-view" hidden>
+            <div id="msf-flow-canvas" class="msf-flow-canvas" aria-label="<?php esc_attr_e('Form flow diagram', 'custom-multi-step-form'); ?>"></div>
+            <div id="msf-flow-warnings" class="msf-flow-warnings" hidden></div>
+            <p class="description msf-flow-help"><?php esc_html_e('Read-only diagram (Phase 1). Nodes cannot be moved yet — drag the canvas background to pan. Edit steps in List view.', 'custom-multi-step-form'); ?></p>
+        </div>
+
         <input type="hidden" id="msf_steps_json" name="msf_steps_json" value="<?php echo esc_attr(wp_json_encode($config['steps'], JSON_UNESCAPED_UNICODE)); ?>">
         <?php
     }

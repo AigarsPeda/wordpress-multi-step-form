@@ -510,6 +510,11 @@
 
         try {
             applyImportedConfig(JSON.parse(raw));
+
+            if (typeof window.msfFlowRender === 'function' && !$('#msf-steps-flow-view').prop('hidden')) {
+                window.msfFlowRender();
+            }
+
             window.alert(msfAdmin.i18n.importSuccess || 'Configuration imported.');
         } catch (err) {
             window.alert(msfAdmin.i18n.importError || 'Invalid JSON.');
@@ -519,6 +524,8 @@
     $('form#post').on('submit', function () {
         syncHidden();
     });
+
+    window.msfBuilderSync = syncHidden;
 
     render(parseInitial());
 
