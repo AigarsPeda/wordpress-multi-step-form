@@ -15,6 +15,8 @@
     --msf-color-price-bg: #eff6ff;
     --msf-color-price-border: #bfdbfe;
     --msf-color-price-text: #1d4ed8;
+    --msf-color-progress-track: #d1d5db;
+    --msf-color-progress-fill: var(--msf-color-primary);
     --msf-radius: 8px;
     --msf-max-width: 560px;
     --msf-font-family: inherit;
@@ -46,8 +48,8 @@
 
 .msf-form__progress {
     display: block;
-    height: 5px;
-    background: var(--msf-color-muted-bg);
+    height: 6px;
+    background: var(--msf-color-progress-track);
     border-radius: 999px;
     overflow: hidden;
     margin-bottom: 1.75rem;
@@ -56,9 +58,17 @@
 .msf-form__progress-bar {
     display: block;
     height: 100%;
-    min-width: 0;
     width: 0;
-    background: var(--msf-color-primary);
+    background: var(--msf-color-progress-fill);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.msf-form__progress-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--msf-color-progress-fill);
     border-radius: 999px;
     transition: width 0.3s ease;
 }
@@ -497,15 +507,27 @@
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    height: 5px !important;
+    height: 6px !important;
     overflow: hidden !important;
+    float: none !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    background-color: var(--msf-color-progress-track) !important;
+    box-shadow: none !important;
 }
 
-.fusion-body .msf-form .msf-form__progress-bar {
+.fusion-body .msf-form .msf-form__progress-bar,
+.fusion-body .msf-form .msf-form__progress-fill {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    background-color: var(--msf-color-primary) !important;
+    float: none !important;
+    height: 100% !important;
+    margin: 0 !important;
+    background-color: var(--msf-color-progress-fill) !important;
+    background-image: none !important;
+    box-shadow: none !important;
 }
 
 .msf-form--preview {

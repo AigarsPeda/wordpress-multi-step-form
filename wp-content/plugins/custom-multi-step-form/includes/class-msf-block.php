@@ -15,6 +15,27 @@ class MSF_Block {
         add_action('enqueue_block_editor_assets', array($this, 'enqueue_block_editor_assets'));
         add_action('wp_enqueue_scripts', array($this, 'register_front_assets'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_form_custom_styles'), 20);
+        add_filter('the_content', array($this, 'repair_form_markup'), 12);
+    }
+
+    public function repair_form_markup($content) {
+        if (strpos($content, 'data-msf-form-id') === false) {
+            return $content;
+        }
+
+        $content = preg_replace(
+            '#(<div class="msf-form__progress"[^>]*)\s*></p>\s*<div class="msf-form__progress-(?:bar|fill)"\s*></div>\s*</p>#',
+            '$1><div class="msf-form__progress-bar"></div>',
+            $content
+        );
+
+        $content = preg_replace(
+            '#(<div class="msf-form__body">)\s*<p class="msf-form__loading">([^<]*)</p>\s*</p>#',
+            '$1<p class="msf-form__loading">$2</p>',
+            $content
+        );
+
+        return $content;
     }
 
     public function enqueue_block_editor_assets() {

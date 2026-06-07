@@ -340,7 +340,8 @@
             || '';
         this.body = root.querySelector('.msf-form__body');
         this.progressWrap = root.querySelector('.msf-form__progress');
-        this.progressBar = root.querySelector('.msf-form__progress-bar');
+        this.progressBar = null;
+        this.ensureProgressBar();
         this.priceBar = root.querySelector('.msf-form__price-bar');
         this.hp = root.querySelector('input[name="msf_hp"]');
         this.currentStepId = null;
@@ -375,6 +376,37 @@
                 progressLabel: 'Formas progress'
             };
     }
+
+    MSForm.prototype.ensureProgressBar = function () {
+        var root = this.root;
+
+        if (!this.progressWrap) {
+            this.progressWrap = root.querySelector('.msf-form__progress');
+        }
+
+        if (!this.progressWrap) {
+            return;
+        }
+
+        var fill = this.progressWrap.querySelector('.msf-form__progress-bar, .msf-form__progress-fill');
+
+        if (!fill) {
+            fill = root.querySelector('.msf-form__progress-bar, .msf-form__progress-fill');
+        }
+
+        if (!fill) {
+            fill = document.createElement('div');
+            fill.className = 'msf-form__progress-bar';
+        } else if (fill.parentNode !== this.progressWrap) {
+            this.progressWrap.appendChild(fill);
+        }
+
+        if (!fill.classList.contains('msf-form__progress-bar')) {
+            fill.classList.add('msf-form__progress-bar');
+        }
+
+        this.progressBar = fill;
+    };
 
     MSForm.prototype.fieldInputId = function (questionId, suffix) {
         var id = 'msf-field-' + this.formId + '-' + questionId;
@@ -469,6 +501,8 @@
     };
 
     MSForm.prototype.updateProgress = function () {
+        this.ensureProgressBar();
+
         if (!this.progressBar || !this.progressWrap) {
             return;
         }
@@ -483,7 +517,13 @@
 
         this.progressWrap.style.display = '';
         var index = steps.findIndex(function (step) { return step.id === this.currentStepId; }.bind(this));
+
+        if (index < 0) {
+            index = 0;
+        }
+
         var percent = steps.length ? ((index + 1) / steps.length) * 100 : 0;
+
         this.progressBar.style.width = percent + '%';
         this.progressWrap.setAttribute('role', 'progressbar');
         this.progressWrap.setAttribute('aria-valuemin', '0');
