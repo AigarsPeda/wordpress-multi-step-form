@@ -348,6 +348,23 @@
     );
   }
 
+  var MSF_SESSION_VERSION = 1;
+  var MSF_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+  function getSessionStorageKey(formId) {
+    return "msf-session-" + formId;
+  }
+
+  function questionAllowsEnterAdvance(question) {
+    if (!question) {
+      return false;
+    }
+
+    return (
+      ["text", "number", "email", "tel", "date"].indexOf(question.type) !== -1
+    );
+  }
+
   function getContactFormat(question) {
     if (!question) {
       return null;
@@ -403,6 +420,8 @@
     this.datePickers = [];
     this.bodyQuestionMinHeight = 0;
     this.isSubmitting = false;
+    this.progressTotalBaseline = null;
+    this._sessionSaveTimer = null;
     this.isPreview = root.getAttribute("data-msf-preview") === "1";
     this.i18n = parseJson(root.getAttribute("data-msf-i18n"), null) ||
       (window.msfRuntime && window.msfRuntime.i18n) || {
@@ -554,6 +573,192 @@
     return steps[0] || null;
   };
 
+  MSForm.prototype.getSessionPayload = function () {
+    if (!this.formId || this.isPreview) {
+      return null;
+    }
+
+    var answers = {};
+
+    Object.keys(this.answers).forEach(
+      function (key) {
+        if (!Object.prototype.hasOwnProperty.call(this.fileAnswers, key)) {
+          answers[key] = this.answers[key];
+        }
+      }.bind(this),
+    );
+
+    return {
+      v: MSF_SESSION_VERSION,
+      formId: this.formId,
+      savedAt: Date.now(),
+      answers: answers,
+      history: this.history.slice(),
+      currentStepId: this.currentStepId,
+      progressTotalBaseline: this.progressTotalBaseline,
+    };
+  };
+
+  MSForm.prototype.saveSession = function () {
+    if (!this.formId || this.isPreview || typeof window.sessionStorage === "undefined") {
+      return;
+    }
+
+    try {
+      var payload = this.getSessionPayload();
+
+      if (!payload) {
+        return;
+      }
+
+      window.sessionStorage.setItem(
+        getSessionStorageKey(this.formId),
+        JSON.stringify(payload),
+      );
+    } catch (error) {
+      // Ignore quota or privacy-mode errors.
+    }
+  };
+
+  MSForm.prototype.scheduleSessionSave = function () {
+    var self = this;
+
+    if (this._sessionSaveTimer) {
+      window.clearTimeout(this._sessionSaveTimer);
+    }
+
+    this._sessionSaveTimer = window.setTimeout(function () {
+      self._sessionSaveTimer = null;
+      self.saveSession();
+    }, 400);
+  };
+
+  MSForm.prototype.clearSession = function () {
+    if (!this.formId || typeof window.sessionStorage === "undefined") {
+      return;
+    }
+
+    try {
+      window.sessionStorage.removeItem(getSessionStorageKey(this.formId));
+    } catch (error) {
+      // Ignore storage errors.
+    }
+  };
+
+  MSForm.prototype.restoreSession = function () {
+    if (!this.formId || this.isPreview || typeof window.sessionStorage === "undefined") {
+      return false;
+    }
+
+    var raw = null;
+
+    try {
+      raw = window.sessionStorage.getItem(getSessionStorageKey(this.formId));
+    } catch (error) {
+      return false;
+    }
+
+    if (!raw) {
+      return false;
+    }
+
+    var payload = parseJson(raw, null);
+
+    if (
+      !payload ||
+      payload.v !== MSF_SESSION_VERSION ||
+      payload.formId !== this.formId ||
+      !payload.answers ||
+      typeof payload.answers !== "object"
+    ) {
+      this.clearSession();
+      return false;
+    }
+
+    if (
+      payload.savedAt &&
+      Date.now() - payload.savedAt > MSF_SESSION_MAX_AGE_MS
+    ) {
+      this.clearSession();
+      return false;
+    }
+
+    this.answers = payload.answers;
+    this.history = Array.isArray(payload.history) ? payload.history.slice() : [];
+    this.currentStepId = payload.currentStepId || null;
+    this.progressTotalBaseline = payload.progressTotalBaseline || null;
+
+    if (!this.resolveRestoredStep()) {
+      this.answers = {};
+      this.history = [];
+      this.currentStepId = null;
+      this.progressTotalBaseline = null;
+      this.clearSession();
+      return false;
+    }
+
+    return true;
+  };
+
+  MSForm.prototype.resolveRestoredStep = function () {
+    var steps = this.getVisibleSteps();
+
+    if (!steps.length) {
+      return false;
+    }
+
+    if (this.currentStepId) {
+      var current = steps.find(
+        function (step) {
+          return step.id === this.currentStepId;
+        }.bind(this),
+      );
+
+      if (current) {
+        return true;
+      }
+    }
+
+    var i;
+
+    for (i = this.history.length - 1; i >= 0; i--) {
+      var historyId = this.history[i];
+      var historyIndex = steps.findIndex(function (step) {
+        return step.id === historyId;
+      });
+
+      if (historyIndex >= 0) {
+        this.history = this.history.slice(0, i + 1);
+        var nextStep = steps[historyIndex + 1];
+
+        if (nextStep) {
+          this.currentStepId = nextStep.id;
+        } else {
+          this.currentStepId = steps[historyIndex].id;
+        }
+
+        return true;
+      }
+    }
+
+    this.history = [];
+    this.currentStepId = steps[0].id;
+    return true;
+  };
+
+  MSForm.prototype.syncProgressBaseline = function (steps) {
+    var visibleCount = steps ? steps.length : 0;
+
+    if (!visibleCount) {
+      return;
+    }
+
+    this.progressTotalBaseline = Math.max(
+      this.progressTotalBaseline || 0,
+      visibleCount,
+    );
+  };
+
   MSForm.prototype.init = function () {
     if (!this.config || !this.config.steps || !this.config.steps.length) {
       this.body.innerHTML = "";
@@ -568,8 +773,12 @@
     }
 
     var self = this;
+    var restored = this.restoreSession();
 
-    this.currentStepId = first.id;
+    if (!restored) {
+      this.currentStepId = first.id;
+      this.syncProgressBaseline(this.getVisibleSteps());
+    }
 
     var start = function () {
       self.precomputeBodyMinHeight();
@@ -626,7 +835,16 @@
       index = 0;
     }
 
-    var percent = steps.length ? ((index + 1) / steps.length) * 100 : 0;
+    this.syncProgressBaseline(steps);
+
+    var current = this.history.length + 1;
+    var total = Math.max(this.progressTotalBaseline || steps.length, current);
+    var isLast = steps.length > 0 && index >= steps.length - 1;
+    var percent = isLast
+      ? 100
+      : total
+        ? (current / total) * 100
+        : 0;
 
     this.progressBar.style.width = percent + "%";
     this.progressWrap.setAttribute("role", "progressbar");
@@ -642,8 +860,6 @@
     );
 
     if (this.progressStepLabel) {
-      var current = index + 1;
-      var total = steps.length;
       var counterTemplate = this.i18n.stepCounter || "%current% no %total%";
       var stepText = counterTemplate
         .replace(
@@ -1038,6 +1254,7 @@
       onChange: function (selectedDates, dateStr) {
         if (dateStr) {
           self.answers[question.id] = dateStr;
+          self.scheduleSessionSave();
           self.updatePriceBar();
         }
       },
@@ -1350,25 +1567,40 @@
       );
 
       nextBtn.addEventListener("click", function () {
-        if (self.isSubmitting) {
-          return;
-        }
-
-        if (question && !self.validateCurrent(question)) {
-          return;
-        }
-
-        if (question) {
-          self.collectCurrent(question);
-        }
-
-        if (isLast) {
-          self.submit(nextBtn);
-          return;
-        }
-
-        self.goNext(step);
+        self.advanceStep(step, question, isLast, nextBtn);
       });
+    }
+
+    if (question && questionAllowsEnterAdvance(question)) {
+      panel.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) {
+          return;
+        }
+
+        var target = event.target;
+
+        if (
+          target &&
+          (target.tagName === "TEXTAREA" ||
+            target.type === "button" ||
+            target.type === "submit")
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        self.advanceStep(step, question, isLast, nextBtn);
+      });
+    }
+
+    if (question && activeFieldWrap && question.type !== "file") {
+      var persistCurrentAnswer = function () {
+        self.collectCurrent(question);
+        self.scheduleSessionSave();
+      };
+
+      activeFieldWrap.addEventListener("input", persistCurrentAnswer);
+      activeFieldWrap.addEventListener("change", persistCurrentAnswer);
     }
 
     this.body.appendChild(panel);
@@ -1600,6 +1832,28 @@
     });
   };
 
+  MSForm.prototype.advanceStep = function (step, question, isLast, nextBtn) {
+    if (this.isSubmitting) {
+      return false;
+    }
+
+    if (question && !this.validateCurrent(question)) {
+      return false;
+    }
+
+    if (question) {
+      this.collectCurrent(question);
+    }
+
+    if (isLast) {
+      this.submit(nextBtn);
+      return true;
+    }
+
+    this.goNext(step);
+    return true;
+  };
+
   MSForm.prototype.goNext = function (currentStep) {
     this.history.push(currentStep.id);
 
@@ -1614,6 +1868,7 @@
     }
 
     this.currentStepId = nextStep.id;
+    this.saveSession();
     this.renderStep();
   };
 
@@ -1625,6 +1880,7 @@
     }
 
     this.currentStepId = previousId;
+    this.saveSession();
     this.renderStep();
   };
 
@@ -2263,6 +2519,8 @@
         if (!payload || !payload.success) {
           throw new Error(getPayloadMessage(payload, fallbackError));
         }
+
+        self.clearSession();
 
         if (self.progressWrap) {
           self.progressWrap.style.display = "none";
