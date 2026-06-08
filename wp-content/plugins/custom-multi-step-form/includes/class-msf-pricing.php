@@ -48,18 +48,21 @@ class MSF_Pricing {
         );
 
         foreach ($steps as $step) {
-            if (empty($step['questions'][0]) || (isset($step['type']) && $step['type'] === 'summary')) {
+            if ((isset($step['type']) && $step['type'] === 'summary') || empty($step['questions']) || !is_array($step['questions'])) {
                 continue;
             }
 
-            $question = $step['questions'][0];
-            $answer   = isset($answers[$question['id']]) ? $answers[$question['id']] : null;
+            foreach ($step['questions'] as $question) {
+                if (empty($question['id']) || !in_array($question['type'], array('radio', 'checkbox'), true)) {
+                    continue;
+                }
 
-            if ($answer === null || $answer === '') {
-                continue;
-            }
+                $answer = isset($answers[$question['id']]) ? $answers[$question['id']] : null;
 
-            if (in_array($question['type'], array('radio', 'checkbox'), true)) {
+                if ($answer === null || $answer === '') {
+                    continue;
+                }
+
                 $selected = is_array($answer) ? $answer : array($answer);
 
                 foreach ($question['options'] as $option) {

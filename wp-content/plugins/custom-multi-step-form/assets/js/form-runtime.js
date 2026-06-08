@@ -265,40 +265,41 @@
     }
 
     getVisibleSteps(config.steps, answers).forEach(function (step) {
-      if (!step.questions || !step.questions[0] || step.type === "summary") {
+      if (!step.questions || !step.questions.length || step.type === "summary") {
         return;
       }
 
-      var question = step.questions[0];
-      var answer = answers[question.id];
+      step.questions.forEach(function (question) {
+        var answer = answers[question.id];
 
-      if (answer === null || answer === undefined || answer === "") {
-        return;
-      }
-
-      if (question.type !== "radio" && question.type !== "checkbox") {
-        return;
-      }
-
-      var selected = Array.isArray(answer) ? answer : [answer];
-
-      (question.options || []).forEach(function (option) {
-        if (selected.indexOf(option.value) === -1 || !option.priceEffect) {
+        if (answer === null || answer === undefined || answer === "") {
           return;
         }
 
-        var amount = parseFloat(option.priceEffect.add) || 0;
-
-        if (option.priceEffect.perGuest) {
-          amount *= Math.max(1, guestCount);
-        }
-
-        if (amount <= 0) {
+        if (question.type !== "radio" && question.type !== "checkbox") {
           return;
         }
 
-        total += amount;
-        lines.push({ label: option.label, amount: amount });
+        var selected = Array.isArray(answer) ? answer : [answer];
+
+        (question.options || []).forEach(function (option) {
+          if (selected.indexOf(option.value) === -1 || !option.priceEffect) {
+            return;
+          }
+
+          var amount = parseFloat(option.priceEffect.add) || 0;
+
+          if (option.priceEffect.perGuest) {
+            amount *= Math.max(1, guestCount);
+          }
+
+          if (amount <= 0) {
+            return;
+          }
+
+          total += amount;
+          lines.push({ label: option.label, amount: amount });
+        });
       });
     });
 
@@ -353,6 +354,16 @@
 
   function getSessionStorageKey(formId) {
     return "msf-session-" + formId;
+  }
+
+  function cleanButtonLabel(label, fallback) {
+    var cleaned = String(label || "")
+      .replace(/\s*→\s*$/, "")
+      .replace(/\s*â†['"]?\s*$/i, "")
+      .replace(/\s*[^\u0100-\u017Fa-zA-Z0-9\s\-.,!?()]+$/g, "")
+      .trim();
+
+    return cleaned || fallback || "";
   }
 
   function questionAllowsEnterAdvance(question) {
@@ -998,25 +1009,51 @@
     return field ? field.value : "";
   };
 
+  MSForm.prototype.getStepQuestions = function (step) {
+    if (!step || !step.questions || !step.questions.length) {
+      return [];
+    }
+
+    return step.questions;
+  };
+
+  MSForm.prototype.validateStep = function (step) {
+    var questions = this.getStepQuestions(step);
+    var i;
+
+    for (i = 0; i < questions.length; i++) {
+      if (!this.validateCurrent(questions[i])) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  MSForm.prototype.collectStep = function (step) {
+    var self = this;
+
+    this.getStepQuestions(step).forEach(function (question) {
+      self.collectCurrent(question);
+    });
+  };
+
   MSForm.prototype.getAnswersForPricing = function () {
+    var self = this;
     var answers = Object.assign({}, this.answers);
     var step = this.getCurrentStep();
 
-    if (
-      !step ||
-      step.type === "summary" ||
-      !step.questions ||
-      !step.questions[0]
-    ) {
+    if (!step || step.type === "summary") {
       return answers;
     }
 
-    var question = step.questions[0];
-    var currentValue = this.readQuestionValue(question);
+    this.getStepQuestions(step).forEach(function (question) {
+      var currentValue = self.readQuestionValue(question);
 
-    if (currentValue !== null && currentValue !== "") {
-      answers[question.id] = currentValue;
-    }
+      if (currentValue !== null && currentValue !== "") {
+        answers[question.id] = currentValue;
+      }
+    });
 
     return answers;
   };
@@ -1119,20 +1156,23 @@
 
     getVisibleSteps(this.config.steps, this.answers).forEach(
       function (step) {
-        if (!step.questions || !step.questions[0] || step.type === "summary") {
+        if (!step.questions || !step.questions.length || step.type === "summary") {
           return;
         }
 
-        var question = step.questions[0];
-        var value = this.answers[question.id];
+        step.questions.forEach(
+          function (question) {
+            var value = this.answers[question.id];
 
-        if (value === undefined || value === null || value === "") {
-          return;
-        }
+            if (value === undefined || value === null || value === "") {
+              return;
+            }
 
-        list.appendChild(el("dt", { text: question.label }));
-        list.appendChild(
-          el("dd", { text: this.getAnswerDisplay(question, value) }),
+            list.appendChild(el("dt", { text: question.label }));
+            list.appendChild(
+              el("dd", { text: this.getAnswerDisplay(question, value) }),
+            );
+          }.bind(this),
         );
       }.bind(this),
     );
@@ -1347,12 +1387,126 @@
     }
   };
 
+  MSForm.prototype.appendQuestionToPanel = function (panel, step, question, context) {
+    context = context || {};
+    var interactive = context.interactive !== false;
+    var hasStepTitle = !!context.hasStepTitle;
+    var useFieldset =
+      question.type === "radio" ||
+      question.type === "checkbox" ||
+      question.type === "consent";
+    var titleMatchesLabel = !!(
+      step.title &&
+      question.label &&
+      step.title.trim() === question.label.trim()
+    );
+    var questionBlock = el("div", { className: "msf-form__step-question" });
+    var numberExamples =
+      question.type === "number" ? this.getNumberExampleValues(question) : [];
+    var fieldWrap = this.renderField(question, {
+      headingShown: hasStepTitle,
+    });
+    var showSecondaryLabel =
+      !useFieldset && (hasStepTitle || context.questionIndex > 0) && question.label;
+    var showDescription =
+      question.description && !numberExamples.length && !useFieldset;
+
+    if (useFieldset) {
+      var fieldset = el("fieldset", { className: "msf-form__fieldset" });
+
+      if (question.type === "consent") {
+        fieldset.setAttribute(
+          "aria-label",
+          question.consentText || question.label || "",
+        );
+      } else {
+        fieldset.appendChild(
+          el("legend", {
+            className: "msf-form__label",
+            text: question.label,
+          }),
+        );
+      }
+
+      fieldset.appendChild(fieldWrap);
+      questionBlock.appendChild(fieldset);
+    } else if (showSecondaryLabel && !titleMatchesLabel) {
+      questionBlock.appendChild(
+        el("label", {
+          className: "msf-form__label",
+          for: this.fieldInputId(question.id),
+          text: question.label,
+        }),
+      );
+
+      if (showDescription) {
+        questionBlock.appendChild(
+          el("p", {
+            className: "msf-form__question-description",
+            text: question.description,
+          }),
+        );
+      }
+
+      questionBlock.appendChild(fieldWrap);
+    } else if (!hasStepTitle && question.label && context.questionIndex === 0) {
+      var soloTitleId = interactive
+        ? this.fieldInputId(step.id, "question-title")
+        : "";
+      var soloTitleAttrs = {
+        className: "msf-form__step-title",
+        text: question.label,
+      };
+
+      if (soloTitleId) {
+        soloTitleAttrs.id = soloTitleId;
+      }
+
+      questionBlock.appendChild(el("h3", soloTitleAttrs));
+
+      if (showDescription) {
+        questionBlock.appendChild(
+          el("p", {
+            className: "msf-form__question-description",
+            text: question.description,
+          }),
+        );
+      }
+
+      questionBlock.appendChild(fieldWrap);
+
+      if (soloTitleId) {
+        panel.setAttribute("aria-labelledby", soloTitleId);
+      }
+    } else {
+      if (showDescription) {
+        questionBlock.appendChild(
+          el("p", {
+            className: "msf-form__question-description",
+            text: question.description,
+          }),
+        );
+      }
+
+      questionBlock.appendChild(fieldWrap);
+    }
+
+    panel.appendChild(questionBlock);
+
+    return {
+      question: question,
+      fieldWrap: fieldWrap,
+    };
+  };
+
   MSForm.prototype.buildStepPanel = function (step, options) {
     options = options || {};
     var showBack = !!options.showBack;
     var isLast = !!options.isLast;
     var interactive = options.interactive !== false;
     var settings = this.config.settings || {};
+    var self = this;
+    var questions = this.getStepQuestions(step);
 
     var panelAttrs = { className: "msf-form__step" };
 
@@ -1365,24 +1519,8 @@
 
     if (step.type === "summary") {
       this.renderSummary(panel);
-    } else if (step.questions && step.questions[0]) {
-      var question = step.questions[0];
-      var useFieldset =
-        question.type === "radio" ||
-        question.type === "checkbox" ||
-        question.type === "consent";
-      var titleMatchesLabel = !!(
-        step.title &&
-        question.label &&
-        step.title.trim() === question.label.trim()
-      );
-      var primaryTitle = "";
-
-      if (step.title) {
-        primaryTitle = step.title;
-      } else if (question.label && !useFieldset) {
-        primaryTitle = question.label;
-      }
+    } else if (questions.length) {
+      var primaryTitle = step.title || "";
 
       if (primaryTitle) {
         var stepTitleId = interactive
@@ -1413,62 +1551,26 @@
         );
       }
 
-      var numberExamples =
-        question.type === "number" ? this.getNumberExampleValues(question) : [];
+      panel._msfQuestions = [];
 
-      if (question.description && !numberExamples.length) {
-        panel.appendChild(
-          el("p", {
-            className: "msf-form__question-description",
-            text: question.description,
-          }),
-        );
-      }
+      questions.forEach(function (question, questionIndex) {
+        var rendered = self.appendQuestionToPanel(panel, step, question, {
+          interactive: interactive,
+          hasStepTitle: !!primaryTitle,
+          questionIndex: questionIndex,
+        });
 
-      var fieldWrap = this.renderField(question, {
-        headingShown: !!primaryTitle,
+        panel._msfQuestions.push(rendered);
       });
-      var showSecondaryLabel =
-        !useFieldset && step.title && question.label && !titleMatchesLabel;
 
-      if (useFieldset) {
-        var fieldset = el("fieldset", { className: "msf-form__fieldset" });
-
-        if (question.type === "consent") {
-          fieldset.setAttribute(
-            "aria-label",
-            question.consentText || question.label || "",
-          );
-        } else {
-          fieldset.appendChild(
-            el("legend", {
-              className: "msf-form__label",
-              text: question.label,
-            }),
-          );
-        }
-
-        fieldset.appendChild(fieldWrap);
-        panel.appendChild(fieldset);
-      } else if (showSecondaryLabel) {
-        panel.appendChild(
-          el("label", {
-            className: "msf-form__label",
-            for: this.fieldInputId(question.id),
-            text: question.label,
-          }),
-        );
-        panel.appendChild(fieldWrap);
-      } else {
-        panel.appendChild(fieldWrap);
+      if (interactive && !primaryTitle && questions[0] && questions[0].label) {
+        panel.setAttribute("aria-label", questions[0].label);
       }
 
-      if (interactive && !primaryTitle && question.label) {
-        panel.setAttribute("aria-label", question.label);
+      if (panel._msfQuestions[0]) {
+        panel._msfFieldWrap = panel._msfQuestions[0].fieldWrap;
+        panel._msfQuestion = panel._msfQuestions[0].question;
       }
-
-      panel._msfFieldWrap = fieldWrap;
-      panel._msfQuestion = question;
     }
 
     var actions = el("div", { className: "msf-form__actions" });
@@ -1488,8 +1590,8 @@
         type: "button",
         className: "msf-form__btn msf-form__btn--primary",
         text: isLast
-          ? settings.submitLabel || "Nosūtīt"
-          : settings.nextLabel || "Tālāk",
+          ? cleanButtonLabel(settings.submitLabel, "Nosūtīt")
+          : cleanButtonLabel(settings.nextLabel, "Tālāk"),
       }),
     );
 
@@ -1530,11 +1632,11 @@
       panel.classList.add("msf-form__step--intro");
     }
 
-    var activeFieldWrap = panel._msfFieldWrap || null;
-    var activeQuestion = panel._msfQuestion || null;
+    var stepQuestions = panel._msfQuestions || [];
 
     delete panel._msfFieldWrap;
     delete panel._msfQuestion;
+    delete panel._msfQuestions;
 
     var actions = panel.querySelector(".msf-form__actions");
     var backBtn = actions
@@ -1547,25 +1649,58 @@
       });
     }
 
-    var question =
-      step.type === "summary" ? null : step.questions && step.questions[0];
     var nextBtn = actions
       ? actions.querySelector(".msf-form__btn--primary")
       : null;
+    var enterAdvanceQuestion = null;
 
-    if (
-      activeQuestion &&
-      activeFieldWrap &&
-      this.config.pricing &&
-      this.config.pricing.enabled
-    ) {
-      activeFieldWrap.addEventListener("input", function () {
-        self.updatePriceBar();
-      });
-      activeFieldWrap.addEventListener("change", function () {
-        self.updatePriceBar();
+    if (step.type !== "summary") {
+      self.getStepQuestions(step).some(function (question) {
+        if (questionAllowsEnterAdvance(question)) {
+          enterAdvanceQuestion = question;
+          return true;
+        }
+
+        return false;
       });
     }
+
+    stepQuestions.forEach(function (item) {
+      var question = item.question;
+      var fieldWrap = item.fieldWrap;
+
+      if (
+        question &&
+        fieldWrap &&
+        self.config.pricing &&
+        self.config.pricing.enabled
+      ) {
+        fieldWrap.addEventListener("input", function () {
+          self.updatePriceBar();
+        });
+        fieldWrap.addEventListener("change", function () {
+          self.updatePriceBar();
+        });
+      }
+
+      if (question && fieldWrap && question.type !== "file") {
+        var persistCurrentAnswer = function () {
+          self.collectCurrent(question);
+          self.scheduleSessionSave();
+        };
+
+        fieldWrap.addEventListener("input", persistCurrentAnswer);
+        fieldWrap.addEventListener("change", persistCurrentAnswer);
+      }
+
+      if (question && question.type === "date" && fieldWrap) {
+        self.initDateField(fieldWrap, question);
+      }
+
+      if (question && question.type === "number" && fieldWrap) {
+        self.initNumberField(fieldWrap, question);
+      }
+    });
 
     if (nextBtn) {
       nextBtn.classList.add(
@@ -1573,11 +1708,11 @@
       );
 
       nextBtn.addEventListener("click", function () {
-        self.advanceStep(step, question, isLast, nextBtn);
+        self.advanceStep(step, isLast, nextBtn);
       });
     }
 
-    if (question && questionAllowsEnterAdvance(question)) {
+    if (enterAdvanceQuestion) {
       panel.addEventListener("keydown", function (event) {
         if (
           event.key !== "Enter" ||
@@ -1599,31 +1734,18 @@
         }
 
         event.preventDefault();
-        self.advanceStep(step, question, isLast, nextBtn);
+        self.advanceStep(step, isLast, nextBtn);
       });
-    }
-
-    if (question && activeFieldWrap && question.type !== "file") {
-      var persistCurrentAnswer = function () {
-        self.collectCurrent(question);
-        self.scheduleSessionSave();
-      };
-
-      activeFieldWrap.addEventListener("input", persistCurrentAnswer);
-      activeFieldWrap.addEventListener("change", persistCurrentAnswer);
     }
 
     this.body.appendChild(panel);
     this.applyStepBodyHeight(panel, step);
 
-    if (activeQuestion && activeQuestion.type === "date" && activeFieldWrap) {
-      this.initDateField(activeFieldWrap, activeQuestion);
-      this.applyStepBodyHeight(panel, step);
-    }
-
-    if (activeQuestion && activeQuestion.type === "number" && activeFieldWrap) {
-      this.initNumberField(activeFieldWrap, activeQuestion);
-    }
+    stepQuestions.forEach(function (item) {
+      if (item.question && item.question.type === "date" && item.fieldWrap) {
+        self.applyStepBodyHeight(panel, step);
+      }
+    });
 
     window.setTimeout(function () {
       panel.classList.remove("msf-form__step--enter");
@@ -1642,14 +1764,23 @@
 
     panel.style.setProperty("--msf-transition-ms", transitionMs + "ms");
 
-    if (
-      activeQuestion &&
-      ["text", "number", "email", "tel", "textarea"].indexOf(
-        activeQuestion.type,
-      ) !== -1
-    ) {
+    var focusQuestion = null;
+
+    self.getStepQuestions(step).some(function (question) {
+      if (
+        ["text", "number", "email", "tel", "textarea"].indexOf(question.type) !==
+        -1
+      ) {
+        focusQuestion = question;
+        return true;
+      }
+
+      return false;
+    });
+
+    if (focusQuestion) {
       window.setTimeout(function () {
-        var focusTarget = self.getQuestionControl(activeQuestion);
+        var focusTarget = self.getQuestionControl(focusQuestion);
 
         if (focusTarget && typeof focusTarget.focus === "function") {
           try {
@@ -1842,17 +1973,17 @@
     });
   };
 
-  MSForm.prototype.advanceStep = function (step, question, isLast, nextBtn) {
+  MSForm.prototype.advanceStep = function (step, isLast, nextBtn) {
     if (this.isSubmitting) {
       return false;
     }
 
-    if (question && !this.validateCurrent(question)) {
+    if (step && step.type !== "summary" && !this.validateStep(step)) {
       return false;
     }
 
-    if (question) {
-      this.collectCurrent(question);
+    if (step && step.type !== "summary") {
+      this.collectStep(step);
     }
 
     if (isLast) {

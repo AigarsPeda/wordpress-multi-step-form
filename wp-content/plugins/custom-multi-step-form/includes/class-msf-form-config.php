@@ -90,6 +90,27 @@ class MSF_Form_Config {
         $config['settings']['pageCss'] = self::sanitize_custom_css(
             isset($config['settings']['pageCss']) ? $config['settings']['pageCss'] : ''
         );
+        $config['settings']['nextLabel'] = self::sanitize_button_label(
+            isset($config['settings']['nextLabel']) ? $config['settings']['nextLabel'] : ''
+        );
+        $config['settings']['backLabel'] = self::sanitize_button_label(
+            isset($config['settings']['backLabel']) ? $config['settings']['backLabel'] : ''
+        );
+        $config['settings']['submitLabel'] = self::sanitize_button_label(
+            isset($config['settings']['submitLabel']) ? $config['settings']['submitLabel'] : ''
+        );
+
+        if ($config['settings']['nextLabel'] === '') {
+            $config['settings']['nextLabel'] = $defaults['settings']['nextLabel'];
+        }
+
+        if ($config['settings']['backLabel'] === '') {
+            $config['settings']['backLabel'] = $defaults['settings']['backLabel'];
+        }
+
+        if ($config['settings']['submitLabel'] === '') {
+            $config['settings']['submitLabel'] = $defaults['settings']['submitLabel'];
+        }
 
         $config['schemaVersion'] = 3;
         $config['steps']         = self::normalize_steps(
@@ -165,9 +186,21 @@ class MSF_Form_Config {
                 continue;
             }
 
-            $question = self::normalize_question($questions[0], $index);
+            $normalized_questions = array();
 
-            if (!$question) {
+            foreach ($questions as $question_index => $raw_question) {
+                if ($question_index >= 5) {
+                    break;
+                }
+
+                $question = self::normalize_question($raw_question, $index + $question_index);
+
+                if ($question) {
+                    $normalized_questions[] = $question;
+                }
+            }
+
+            if (empty($normalized_questions)) {
                 continue;
             }
 
@@ -180,7 +213,7 @@ class MSF_Form_Config {
                 'interval'    => array(
                     'afterPreviousMs' => absint(isset($step['interval']['afterPreviousMs']) ? $step['interval']['afterPreviousMs'] : 0),
                 ),
-                'questions'   => array($question),
+                'questions'   => $normalized_questions,
             );
 
             $index++;
@@ -499,6 +532,25 @@ class MSF_Form_Config {
             'orderby'        => 'title',
             'order'          => 'ASC',
         ));
+    }
+
+    /**
+     * Button labels should be plain text; the runtime adds the next-arrow via CSS.
+     *
+     * @param string $label
+     * @return string
+     */
+    public static function sanitize_button_label($label) {
+        if (!is_string($label)) {
+            return '';
+        }
+
+        $label = sanitize_text_field($label);
+        $label = preg_replace('/\s*→\s*$/u', '', $label);
+        $label = preg_replace('/\s*â†[\x{2019}\x{201D}\'"`]?\s*$/u', '', $label);
+        $label = preg_replace('/\s*[^\p{L}\p{N}\s\-.,!?()]+$/u', '', $label);
+
+        return trim($label);
     }
 
     public static function sanitize_custom_css($css) {

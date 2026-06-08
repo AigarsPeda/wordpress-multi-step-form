@@ -8,7 +8,7 @@ class MSF_Seeder {
 
     const OPTION_KEY = 'msf_sample_form_seeded';
     const CONFIG_VERSION_KEY = 'msf_sample_form_config_version';
-    const CONFIG_VERSION = 5;
+    const CONFIG_VERSION = 7;
 
     public static function get_banquet_quote_config() {
         $config = MSF_Form_Config::default_config();
@@ -165,50 +165,43 @@ class MSF_Seeder {
             array(
                 'id'          => 'step_large_event',
                 'type'        => 'question',
-                'title'       => 'Liels pasākums',
+                'title'       => 'Papildu pakalpojumi',
                 'description' => '',
-                'visibility'  => array(
-                    'mode'       => 'conditional',
-                    'logic'      => 'or',
-                    'conditions' => array(),
-                    'groups'     => array(
-                        array(
-                            'logic'      => 'and',
-                            'conditions' => array(
-                                array(
-                                    'questionId' => 'q_event_type',
-                                    'operator'   => 'equals',
-                                    'value'      => 'corporate',
-                                ),
-                                array(
-                                    'questionId' => 'q_guest_count',
-                                    'operator'   => 'greaterThan',
-                                    'value'      => '100',
-                                ),
+                'visibility'  => array('mode' => 'always'),
+                'questions'   => array(
+                    array(
+                        'id'       => 'q_large_event_services',
+                        'type'     => 'checkbox',
+                        'label'    => 'Ko nepieciešams papildus?',
+                        'required' => false,
+                        'options'  => array(
+                            array(
+                                'value' => 'disposable_tableware',
+                                'label' => 'Nepieciešami vienreizējie trauki',
                             ),
-                        ),
-                        array(
-                            'logic'      => 'and',
-                            'conditions' => array(
-                                array(
-                                    'questionId' => 'q_event_type',
-                                    'operator'   => 'equals',
-                                    'value'      => 'wedding',
-                                ),
-                                array(
-                                    'questionId' => 'q_guest_count',
-                                    'operator'   => 'greaterThan',
-                                    'value'      => '80',
-                                ),
+                            array(
+                                'value' => 'ceramic_tableware',
+                                'label' => 'Nepieciešami īstie keramikas trauki',
+                            ),
+                            array(
+                                'value' => 'table_setting',
+                                'label' => 'Nepieciešama galdu klāšana',
+                            ),
+                            array(
+                                'value' => 'delivery',
+                                'label' => 'Nepieciešama piegāde',
+                            ),
+                            array(
+                                'value' => 'service',
+                                'label' => 'Nepieciešama apkalpošana (viesmīlis)',
                             ),
                         ),
                     ),
-                ),
-                'questions'   => array(
                     array(
                         'id'       => 'q_large_event_notes',
                         'type'     => 'textarea',
-                        'label'    => 'Papildu prasības lielam pasākumam (piem., skatuve, VIP zona)',
+                        'label'    => 'Papildu komentāri',
+                        'description' => 'Brīvā formā (neobligāti)',
                         'required' => false,
                         'options'  => array(),
                     ),

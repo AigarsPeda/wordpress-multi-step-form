@@ -95,27 +95,31 @@ class MSF_Submit {
                 continue;
             }
 
-            if (empty($step['questions'][0])) {
+            if (empty($step['questions']) || !is_array($step['questions'])) {
                 continue;
             }
 
-            $question = $step['questions'][0];
-            $qid      = $question['id'];
-            $value    = $this->resolve_answer_value($question, $qid, $raw_answers);
+            foreach ($step['questions'] as $question) {
+                if (empty($question['id'])) {
+                    continue;
+                }
 
-            if (is_wp_error($value)) {
-                return $value;
-            }
+                $qid   = $question['id'];
+                $value = $this->resolve_answer_value($question, $qid, $raw_answers);
 
-            if (!empty($question['required']) && $this->is_empty_answer($question, $value)) {
-                return new WP_Error('required', sprintf($errors['required_field'], $question['label']));
-            }
+                if (is_wp_error($value)) {
+                    return $value;
+                }
 
-            if ($this->is_empty_answer($question, $value)) {
-                continue;
-            }
+                if (!empty($question['required']) && $this->is_empty_answer($question, $value)) {
+                    return new WP_Error('required', sprintf($errors['required_field'], $question['label']));
+                }
 
-            switch ($question['type']) {
+                if ($this->is_empty_answer($question, $value)) {
+                    continue;
+                }
+
+                switch ($question['type']) {
                 case 'email':
                     $value = sanitize_email($value);
                     if (!MSF_Validation::is_valid_email($value)) {
@@ -184,12 +188,13 @@ class MSF_Submit {
                     break;
             }
 
-            $formatted[] = array(
-                'id'      => $qid,
-                'label'   => $question['label'],
-                'value'   => $value,
-                'display' => $this->format_display($question, $value),
-            );
+                $formatted[] = array(
+                    'id'      => $qid,
+                    'label'   => $question['label'],
+                    'value'   => $value,
+                    'display' => $this->format_display($question, $value),
+                );
+            }
         }
 
         return $formatted;

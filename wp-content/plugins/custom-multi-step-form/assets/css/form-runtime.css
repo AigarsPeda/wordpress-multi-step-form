@@ -46,6 +46,10 @@
     transition: min-height 0.25s ease;
 }
 
+.msf-form__step-question + .msf-form__step-question {
+    margin-top: 1.35rem;
+}
+
 .msf-form__progress-header {
     margin-bottom: 1.1rem;
 }
@@ -489,7 +493,7 @@
 }
 
 .msf-form__btn--primary.msf-form__btn--next::after {
-    content: "→";
+    content: "\2192";
     display: inline-block;
     margin-left: 0.45rem;
     transition: transform 0.15s ease;
@@ -741,6 +745,12 @@
     text-transform: none !important;
     letter-spacing: 0 !important;
     box-shadow: none !important;
+}
+
+.fusion-body .msf-form .msf-form__btn--primary.msf-form__btn--next::after {
+    content: "\2192" !important;
+    display: inline-block !important;
+    margin-left: 0.45rem !important;
 }
 
 .fusion-body .msf-form .msf-form__progress {
