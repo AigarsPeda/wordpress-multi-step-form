@@ -247,14 +247,33 @@
         }
 
         if (config.settings) {
+            var currentCustomCss = $('#msf_custom_css').val() || '';
+            var currentPageCss = $('#msf_page_css').val() || '';
+
             $('#msf_owner_email').val(config.settings.ownerEmail || '');
             $('#msf_success_message').val(config.settings.successMessage || '');
             $('#msf_customer_subject').val(config.settings.customerEmailSubject || '');
             $('#msf_customer_body').val(config.settings.customerEmailBody || '');
             $('#msf_submit_label').val(config.settings.submitLabel || '');
             $('#msf_step_transition_ms').val(config.settings.stepTransitionMs || 400);
-            $('#msf_custom_css').val(config.settings.customCss || '');
-            $('#msf_page_css').val(config.settings.pageCss || '');
+
+            if (
+                Object.prototype.hasOwnProperty.call(config.settings, 'customCss') &&
+                String(config.settings.customCss || '').trim() !== ''
+            ) {
+                $('#msf_custom_css').val(config.settings.customCss);
+            } else if (!currentCustomCss) {
+                $('#msf_custom_css').val('');
+            }
+
+            if (
+                Object.prototype.hasOwnProperty.call(config.settings, 'pageCss') &&
+                String(config.settings.pageCss || '').trim() !== ''
+            ) {
+                $('#msf_page_css').val(config.settings.pageCss);
+            } else if (!currentPageCss) {
+                $('#msf_page_css').val('');
+            }
         }
 
         if (config.pricing) {

@@ -1,0 +1,57 @@
+/* Paste into: Multi Step Forms → your form → Theme / custom CSS → Page layout CSS */
+
+body.has-msf-form #wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.has-msf-form #main {
+  flex: 1 0 auto;
+  padding-bottom: 0 !important;
+}
+
+body.has-msf-form .fusion-footer {
+  flex-shrink: 0;
+}
+
+/* Mobile: small side margins instead of Avada's large gutters */
+@media (max-width: 767px) {
+  body.has-msf-form #main {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  body.has-msf-form #main > .fusion-row,
+  body.has-msf-form #main #content,
+  body.has-msf-form #content .post-content,
+  body.has-msf-form .fusion-fullwidth,
+  body.has-msf-form .fusion-builder-row,
+  body.has-msf-form .fusion-builder-column .fusion-column-wrapper {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  body.has-msf-form #msf-form-3247 {
+    --msf-max-width: 100%;
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 768px) {
+  body.has-msf-form #main {
+    padding-top: 50px;
+  }
+
+  body.has-msf-form #main > .fusion-row,
+  body.has-msf-form #main #content {
+    width: 100%;
+  }
+}

@@ -1,0 +1,76 @@
+/* Paste into: Multi Step Forms → your form → Theme / custom CSS → Custom CSS */
+
+#msf-form-3247 {
+  --msf-color-primary: #d81b60;
+  --msf-color-primary-text: #ffffff;
+  --msf-color-text: #f5f5f5;
+  --msf-color-text-muted: #bdbdbd;
+  --msf-color-border: #555555;
+  --msf-color-surface: #333333;
+  --msf-color-input-bg: #2b2b2b;
+  --msf-color-muted-bg: #404040;
+  --msf-color-error: #ff8a80;
+  --msf-color-error-bg: #4a2020;
+  --msf-color-error-border: #7a3030;
+  --msf-color-success-bg: #1e3a2f;
+  --msf-color-success-border: #2e7d5a;
+  --msf-color-price-bg: #383838;
+  --msf-color-price-border: #555555;
+  --msf-color-price-text: #f8bbd0;
+  --msf-color-progress-track: #4a4a4a;
+  --msf-color-progress-fill: var(--msf-color-primary);
+  --msf-radius: 6px;
+  --msf-max-width: 640px;
+
+  max-width: var(--msf-max-width);
+  margin: 2rem auto;
+  padding: 2rem 2rem 1.75rem;
+  background: var(--msf-color-surface);
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
+  color: var(--msf-color-text);
+}
+
+#msf-form-3247 .msf-form__step-title,
+#msf-form-3247 .msf-form__label,
+#msf-form-3247 .msf-form__fieldset legend.msf-form__label {
+  color: #ffffff;
+}
+
+#msf-form-3247 .msf-form__consent a {
+  color: #f48fb1;
+}
+
+#msf-form-3247 .msf-form__quick-pick:hover {
+  border-color: #d81b60 !important;
+  background: #404040 !important;
+  color: #f5f5f5 !important;
+}
+
+/* Flatpickr — scope to this form only */
+#msf-form-3247 .flatpickr-calendar {
+  background: #333333;
+  border-color: #555555;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+#msf-form-3247 .flatpickr-day {
+  color: #f5f5f5;
+}
+
+#msf-form-3247 .flatpickr-day:hover,
+#msf-form-3247 .flatpickr-day:focus {
+  background: #404040;
+}
+
+#msf-form-3247 .flatpickr-day.selected {
+  background: #d81b60 !important;
+  border-color: #d81b60 !important;
+}
+
+@media (max-width: 640px) {
+  #msf-form-3247 {
+    margin: 1rem auto;
+    padding: 1.25rem 1rem;
+  }
+}
