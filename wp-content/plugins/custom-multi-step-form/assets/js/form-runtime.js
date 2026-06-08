@@ -1729,7 +1729,7 @@
               el("button", {
                 type: "button",
                 className:
-                  "msf-form__btn msf-form__btn--secondary msf-form__number-example",
+                  "msf-form__quick-pick msf-form__number-example",
                 "data-msf-number-value": String(exampleValue),
                 text: String(exampleValue),
               }),
@@ -1861,7 +1861,7 @@
             el("button", {
               type: "button",
               className:
-                "msf-form__btn msf-form__btn--secondary msf-form__number-example msf-form__date-shortcut",
+                "msf-form__quick-pick msf-form__number-example msf-form__date-shortcut",
               "data-msf-date-shortcut": item[0],
               text: item[1],
             }),

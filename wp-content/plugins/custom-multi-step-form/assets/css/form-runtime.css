@@ -285,17 +285,43 @@
 .msf-form__number-example-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
+}
+
+.msf-form__quick-pick {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    min-width: auto;
+    margin: 0;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--msf-color-border);
+    border-radius: var(--msf-radius);
+    background: transparent;
+    color: var(--msf-color-text-muted);
+    font: inherit;
+    font-size: max(16px, 0.8125rem);
+    font-weight: 400;
+    line-height: 1.2;
+    cursor: pointer;
+    box-shadow: none;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.msf-form__quick-pick:hover {
+    color: var(--msf-color-text);
+    border-color: color-mix(in srgb, var(--msf-color-primary) 45%, var(--msf-color-border));
+    background: var(--msf-color-muted-bg);
+}
+
+.msf-form__quick-pick:active {
+    transform: scale(0.98);
 }
 
 .msf-form__number-example {
-    min-height: 2.5rem;
-    min-width: auto;
-    padding: 0.4rem 0.75rem;
-    font-size: max(16px, var(--msf-text-sm));
-    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    line-height: 1.2;
 }
 
 .msf-form__choices {
@@ -789,15 +815,30 @@
     color: var(--msf-color-primary) !important;
 }
 
-.fusion-body .msf-form .msf-form__number-btn,
-.fusion-body .msf-form .msf-form__number-example,
-.fusion-body .msf-form .msf-form__date-shortcut {
+.fusion-body .msf-form .msf-form__number-btn {
     background-color: var(--msf-color-muted-bg) !important;
     color: var(--msf-color-text) !important;
     border: 1.5px solid var(--msf-color-border) !important;
     box-shadow: none !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
+}
+
+.fusion-body .msf-form .msf-form__quick-pick {
+    min-height: 2.25rem !important;
+    padding: 0.35rem 0.7rem !important;
+    background-color: transparent !important;
+    color: var(--msf-color-text-muted) !important;
+    border: 1px solid var(--msf-color-border) !important;
+    box-shadow: none !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+.fusion-body .msf-form .msf-form__quick-pick:hover {
+    color: var(--msf-color-text) !important;
+    background-color: var(--msf-color-muted-bg) !important;
 }
 
 .fusion-body .msf-form .msf-form__number-examples-label {
