@@ -9,6 +9,8 @@ These live in WordPress under **Multi Step Forms → Banketu piedāvājums → T
 | [custom-css.css](custom-css.css) | **Custom CSS** |
 | [page-layout-css.css](page-layout-css.css) | **Page layout CSS** |
 
-After pasting: **Update** the form, then hard-refresh `/calculator/`.
+After pasting: **Update** the form, then hard-refresh `/calculator/` (Cmd+Shift+R).
+
+Also on the **calculator page** in the block editor: select the Multi Step Form block → sidebar **Appearance** → set **Accent color** to `#d81b60` (otherwise the block inline style can keep default blue).
 
 **Tip:** Before importing JSON, click **Export JSON** so you keep a backup with `settings.customCss` and `settings.pageCss`.
