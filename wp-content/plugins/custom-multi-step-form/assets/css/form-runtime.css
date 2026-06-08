@@ -275,10 +275,11 @@
 }
 
 .msf-form__number-examples-label {
-    margin: 0 0 0.45rem;
-    font-size: var(--msf-text-sm);
-    font-weight: 600;
+    margin: 0 0 0.4rem;
+    font-size: 0.8125rem;
+    font-weight: 400;
     color: var(--msf-color-text-muted);
+    opacity: 0.9;
 }
 
 .msf-form__number-example-list {
@@ -288,12 +289,13 @@
 }
 
 .msf-form__number-example {
-    min-height: auto;
-    min-width: 3.25rem;
-    padding: 0.55rem 0.9rem;
-    font-size: max(16px, var(--msf-text-body));
-    font-weight: 600;
+    min-height: 2.5rem;
+    min-width: auto;
+    padding: 0.4rem 0.75rem;
+    font-size: max(16px, var(--msf-text-sm));
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
+    line-height: 1.2;
 }
 
 .msf-form__choices {
@@ -800,6 +802,7 @@
 
 .fusion-body .msf-form .msf-form__number-examples-label {
     color: var(--msf-color-text-muted) !important;
+    font-weight: 400 !important;
     text-transform: none !important;
 }
 

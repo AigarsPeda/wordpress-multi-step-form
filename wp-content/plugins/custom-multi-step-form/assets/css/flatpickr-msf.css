@@ -41,11 +41,12 @@
 }
 
 .msf-form__date-shortcut {
-    min-height: auto;
+    min-height: 2.5rem;
     min-width: auto;
-    padding: 0.55rem 0.9rem;
+    padding: 0.4rem 0.75rem;
     font-size: max(16px, var(--msf-text-sm, 0.875rem));
-    font-weight: 600;
+    font-weight: 500;
+    line-height: 1.2;
     white-space: nowrap;
 }
 
