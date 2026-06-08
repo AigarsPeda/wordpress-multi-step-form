@@ -46,22 +46,63 @@
     transition: min-height 0.25s ease;
 }
 
+.msf-form__progress-header {
+    margin-bottom: 1.5rem;
+}
+
+.msf-form__progress-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+}
+
+.msf-form__progress-step {
+    margin: 0;
+    font-size: var(--msf-text-sm);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--msf-color-text-muted);
+    line-height: 1.4;
+}
+
+.msf-form__progress-step-current,
+.msf-form__progress-step-total {
+    font-size: 1.05em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--msf-color-primary);
+}
+
+.msf-form__progress-percent {
+    flex-shrink: 0;
+    font-size: var(--msf-text-sm);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--msf-color-text-muted);
+}
+
 .msf-form__progress {
     display: block;
-    height: 6px;
+    height: 10px;
     background: var(--msf-color-progress-track);
     border-radius: 999px;
     overflow: hidden;
-    margin-bottom: 1.75rem;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .msf-form__progress-bar {
     display: block;
     height: 100%;
     width: 0;
-    background: var(--msf-color-progress-fill);
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--msf-color-progress-fill) 82%, #ffffff),
+        var(--msf-color-progress-fill)
+    );
     border-radius: 999px;
-    transition: width 0.3s ease;
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .msf-form__progress-fill {
@@ -163,6 +204,75 @@
 .msf-form__input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+
+.msf-form__number {
+    display: grid;
+    grid-template-columns: 3rem 1fr 3rem;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.msf-form__number-btn {
+    appearance: none;
+    border: 1.5px solid var(--msf-color-border);
+    border-radius: var(--msf-radius);
+    background: var(--msf-color-muted-bg);
+    color: var(--msf-color-text);
+    font: inherit;
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+
+.msf-form__number-btn:hover {
+    border-color: var(--msf-color-primary);
+    background: var(--msf-color-input-bg);
+}
+
+.msf-form__number-btn:active {
+    transform: scale(0.96);
+}
+
+.msf-form__input--number {
+    text-align: center;
+    font-size: max(18px, var(--msf-text-body));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+
+.msf-form__input--number::placeholder {
+    font-weight: 500;
+    opacity: 0.72;
+}
+
+.msf-form__number-examples {
+    margin-top: 0.9rem;
+}
+
+.msf-form__number-examples-label {
+    margin: 0 0 0.5rem;
+    font-size: var(--msf-text-sm);
+    font-weight: 600;
+    color: var(--msf-color-text-muted);
+}
+
+.msf-form__number-example-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.msf-form__number-example {
+    min-height: auto;
+    min-width: 3.25rem;
+    padding: 0.55rem 0.9rem;
+    font-size: max(16px, var(--msf-text-body));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
 .msf-form__choices {
@@ -321,10 +431,23 @@
 .msf-form__btn--primary {
     background: var(--msf-color-primary);
     color: var(--msf-color-primary-text);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--msf-color-primary) 28%, transparent);
 }
 
 .msf-form__btn--primary:hover:not(:disabled) {
     filter: brightness(0.94);
+    transform: translateY(-1px);
+}
+
+.msf-form__btn--primary.msf-form__btn--next::after {
+    content: "→";
+    display: inline-block;
+    margin-left: 0.45rem;
+    transition: transform 0.15s ease;
+}
+
+.msf-form__btn--primary.msf-form__btn--next:hover:not(:disabled)::after {
+    transform: translateX(3px);
 }
 
 .msf-form__btn--secondary {
@@ -406,6 +529,11 @@
     border: none;
     border-bottom: 1px solid var(--msf-color-price-border, var(--msf-color-border));
     border-radius: 0;
+    transition: background-color 0.3s ease;
+}
+
+.msf-form__price-bar--updated {
+    animation: msf-price-flash 0.55s ease;
 }
 
 .msf-form__price-label {
@@ -432,6 +560,63 @@
 .msf-form__step--ready {
     opacity: 1;
     transform: translateY(0);
+}
+
+.msf-form__step--intro .msf-form__field > .msf-form__input,
+.msf-form__step--intro .msf-form__number {
+    animation: msf-intro-pulse 2.4s ease-in-out 0.35s 2;
+}
+
+.msf-form__step--ready > .msf-form__step-title,
+.msf-form__step--ready > .msf-form__step-description,
+.msf-form__step--ready > .msf-form__question-description,
+.msf-form__step--ready > .msf-form__label,
+.msf-form__step--ready > .msf-form__fieldset,
+.msf-form__step--ready > .msf-form__field,
+.msf-form__step--ready > .msf-form__choices,
+.msf-form__step--ready > .msf-form__actions {
+    animation: msf-step-item-in 0.42s ease backwards;
+}
+
+.msf-form__step--ready > .msf-form__step-title { animation-delay: 0.04s; }
+.msf-form__step--ready > .msf-form__step-description,
+.msf-form__step--ready > .msf-form__question-description { animation-delay: 0.08s; }
+.msf-form__step--ready > .msf-form__label,
+.msf-form__step--ready > .msf-form__fieldset { animation-delay: 0.12s; }
+.msf-form__step--ready > .msf-form__field,
+.msf-form__step--ready > .msf-form__choices { animation-delay: 0.18s; }
+.msf-form__step--ready > .msf-form__actions { animation-delay: 0.26s; }
+
+@keyframes msf-step-item-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes msf-intro-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--msf-color-primary) 0%, transparent);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--msf-color-primary) 22%, transparent);
+    }
+}
+
+@keyframes msf-price-flash {
+    0% {
+        background-color: color-mix(in srgb, var(--msf-color-primary) 16%, transparent);
+    }
+
+    100% {
+        background-color: transparent;
+    }
 }
 
 .msf-form__summary-intro {
@@ -568,5 +753,21 @@
 
     .msf-form__btn {
         width: 100%;
+    }
+
+    .msf-form__number {
+        grid-template-columns: 2.75rem 1fr 2.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .msf-form__step,
+    .msf-form__step--ready > *,
+    .msf-form__btn,
+    .msf-form__price-bar,
+    .msf-form__step--intro .msf-form__field > .msf-form__input,
+    .msf-form__step--intro .msf-form__number {
+        animation: none !important;
+        transition: none !important;
     }
 }

@@ -61,6 +61,29 @@
         }).join('\n');
     }
 
+    function numberExamplesToText(examples) {
+        if (!examples || !examples.length) {
+            return '';
+        }
+
+        return examples.join(', ');
+    }
+
+    function textToNumberExamples(text) {
+        return String(text || '')
+            .split(/[\s,]+/)
+            .map(function (part) {
+                return part.trim();
+            })
+            .filter(Boolean)
+            .map(function (part) {
+                return parseFloat(part);
+            })
+            .filter(function (value) {
+                return !isNaN(value);
+            });
+    }
+
     function textToOptions(text) {
         return text.split('\n').map(function (line) {
             line = line.trim();
@@ -105,12 +128,18 @@
         var isSummary = stepType === 'summary';
         var isConsent = question.type === 'consent';
         var isFile = question.type === 'file';
+        var isNumber = question.type === 'number';
         var isText = (question.type || 'text') === 'text';
         var textFormat = question.format || '';
         var hasNestedGroups = visibility.groups && visibility.groups.length;
         var consentDisplay = isConsent ? '' : ' style="display:none;"';
         var fileDisplay = isFile ? '' : ' style="display:none;"';
+        var numberDisplay = isNumber ? '' : ' style="display:none;"';
         var maxSize = (question.validation && question.validation.maxSizeMb) ? question.validation.maxSizeMb : 5;
+        var numberMin = (question.validation && question.validation.min != null) ? question.validation.min : '';
+        var numberMax = (question.validation && question.validation.max != null) ? question.validation.max : '';
+        var numberPlaceholder = question.placeholder || '';
+        var numberExamples = numberExamplesToText(question.numberExamples);
 
         var html = '<div class="msf-step-card" data-index="' + index + '">';
         html += '<div class="msf-step-card__head">';
@@ -135,6 +164,14 @@
         html += '<p><label>' + msfAdmin.i18n.consentLinkLabel + '<br><input type="text" class="regular-text msf-consent-link-label" value="' + escapeAttr(question.consentLinkLabel || '') + '"></label></p>';
         html += '</div>';
         html += '<p class="msf-file-wrap"' + fileDisplay + '><label>' + msfAdmin.i18n.fileMaxSize + '<br><input type="number" class="small-text msf-file-max-size" min="0.1" max="20" step="0.1" value="' + escapeAttr(maxSize) + '"></label></p>';
+        html += '<div class="msf-number-wrap"' + numberDisplay + '>';
+        html += '<p><label>' + msfAdmin.i18n.numberMin + '<br><input type="number" class="small-text msf-number-min" step="1" value="' + escapeAttr(numberMin) + '"></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.numberMax + '<br><input type="number" class="small-text msf-number-max" step="1" value="' + escapeAttr(numberMax) + '"></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.numberPlaceholder + '<br><input type="text" class="regular-text msf-number-placeholder" value="' + escapeAttr(numberPlaceholder) + '"></label></p>';
+        html += '<p class="description">' + (msfAdmin.i18n.numberPlaceholderHelp || '') + '</p>';
+        html += '<p><label>' + msfAdmin.i18n.numberExamples + '<br><input type="text" class="widefat msf-number-examples" value="' + escapeAttr(numberExamples) + '"></label></p>';
+        html += '<p class="description">' + (msfAdmin.i18n.numberExamplesHelp || '') + '</p>';
+        html += '</div>';
         html += '</div>';
         html += '<div class="msf-step-visibility">';
         html += '<p><label>' + msfAdmin.i18n.visibilityMode + '<br><select class="msf-visibility-mode">';
@@ -341,6 +378,26 @@
                 };
             }
 
+            if (type === 'number') {
+                var minValue = $card.find('.msf-number-min').val();
+                var maxValue = $card.find('.msf-number-max').val();
+                var placeholderValue = $card.find('.msf-number-placeholder').val();
+                var exampleValues = textToNumberExamples($card.find('.msf-number-examples').val());
+
+                question.validation = {
+                    min: minValue === '' ? null : parseFloat(minValue),
+                    max: maxValue === '' ? null : parseFloat(maxValue)
+                };
+
+                if (placeholderValue) {
+                    question.placeholder = placeholderValue;
+                }
+
+                if (exampleValues.length) {
+                    question.numberExamples = exampleValues;
+                }
+            }
+
             if (type === 'text') {
                 var format = $card.find('.msf-question-format').val();
 
@@ -428,6 +485,7 @@
             $card.find('.msf-options-wrap').toggle(type === 'radio' || type === 'checkbox');
             $card.find('.msf-consent-wrap').toggle(type === 'consent');
             $card.find('.msf-file-wrap').toggle(type === 'file');
+            $card.find('.msf-number-wrap').toggle(type === 'number');
             $card.find('.msf-format-wrap').toggle(type === 'text');
         }
 

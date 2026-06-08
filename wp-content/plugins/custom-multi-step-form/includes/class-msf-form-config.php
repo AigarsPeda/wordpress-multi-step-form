@@ -312,10 +312,27 @@ class MSF_Form_Config {
         }
 
         if ($type === 'number') {
-            $normalized['validation'] = array(
-                'min' => isset($question['validation']['min']) ? floatval($question['validation']['min']) : null,
-                'max' => isset($question['validation']['max']) ? floatval($question['validation']['max']) : null,
+            $validation = array(
+                'min' => isset($question['validation']['min']) && $question['validation']['min'] !== '' ? floatval($question['validation']['min']) : null,
+                'max' => isset($question['validation']['max']) && $question['validation']['max'] !== '' ? floatval($question['validation']['max']) : null,
             );
+
+            $normalized['validation'] = $validation;
+
+            $placeholder = isset($question['placeholder']) ? sanitize_text_field($question['placeholder']) : '';
+
+            if ($placeholder !== '') {
+                $normalized['placeholder'] = $placeholder;
+            }
+
+            $examples = self::normalize_number_examples(
+                isset($question['numberExamples']) ? $question['numberExamples'] : array(),
+                $validation
+            );
+
+            if (!empty($examples)) {
+                $normalized['numberExamples'] = $examples;
+            }
         }
 
         if ($type === 'file') {
@@ -336,6 +353,44 @@ class MSF_Form_Config {
             if (in_array($format, array('email', 'phone'), true)) {
                 $normalized['format'] = $format;
             }
+        }
+
+        return $normalized;
+    }
+
+    private static function normalize_number_examples($examples, $validation) {
+        $normalized = array();
+        $seen       = array();
+
+        if (!is_array($examples)) {
+            return $normalized;
+        }
+
+        $min = isset($validation['min']) ? floatval($validation['min']) : null;
+        $max = isset($validation['max']) ? floatval($validation['max']) : null;
+
+        foreach ($examples as $value) {
+            if (!is_numeric($value)) {
+                continue;
+            }
+
+            $number = floatval($value);
+            $key    = (string) $number;
+
+            if (isset($seen[ $key ])) {
+                continue;
+            }
+
+            if ($min !== null && $number < $min) {
+                continue;
+            }
+
+            if ($max !== null && $number > $max) {
+                continue;
+            }
+
+            $seen[ $key ]       = true;
+            $normalized[] = $number;
         }
 
         return $normalized;

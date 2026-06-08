@@ -340,7 +340,10 @@
             || '';
         this.body = root.querySelector('.msf-form__body');
         this.progressWrap = root.querySelector('.msf-form__progress');
+        this.progressStepLabel = root.querySelector('.msf-form__progress-step');
+        this.progressPercentLabel = root.querySelector('.msf-form__progress-percent');
         this.progressBar = null;
+        this.lastPriceTotal = null;
         this.ensureProgressBar();
         this.priceBar = root.querySelector('.msf-form__price-bar');
         this.hp = root.querySelector('input[name="msf_hp"]');
@@ -373,7 +376,15 @@
                 invalidEmail: 'Lūdzu, ievadiet derīgu e-pasta adresi.',
                 invalidPhone: 'Lūdzu, ievadiet derīgu tālruņa numuru.',
                 invalidDate: 'Lūdzu, ievadiet derīgu datumu.',
-                progressLabel: 'Formas progress'
+                progressLabel: 'Formas progress',
+                stepCounter: '%current% no %total%',
+                numberPlaceholder: 'piemēram, 80',
+                numberGuestPlaceholder: '80',
+                numberRange: 'No %min% līdz %max%',
+                numberRangeExample: 'piemēram, %example% · no %min% līdz %max%',
+                numberExamplesLabel: 'Populāri varianti:',
+                numberDecrease: 'Samazināt',
+                numberIncrease: 'Palielināt'
             };
     }
 
@@ -382,6 +393,14 @@
 
         if (!this.progressWrap) {
             this.progressWrap = root.querySelector('.msf-form__progress');
+        }
+
+        if (!this.progressStepLabel) {
+            this.progressStepLabel = root.querySelector('.msf-form__progress-step');
+        }
+
+        if (!this.progressPercentLabel) {
+            this.progressPercentLabel = root.querySelector('.msf-form__progress-percent');
         }
 
         if (!this.progressWrap) {
@@ -510,9 +529,22 @@
         var settings = this.config.settings || {};
         var steps = this.getVisibleSteps();
 
+        if (!this.progressHeader) {
+            this.progressHeader = this.root.querySelector('.msf-form__progress-header');
+        }
+
         if (!settings.showProgressBar) {
-            this.progressWrap.style.display = 'none';
+            if (this.progressHeader) {
+                this.progressHeader.hidden = true;
+            } else if (this.progressWrap) {
+                this.progressWrap.style.display = 'none';
+            }
+
             return;
+        }
+
+        if (this.progressHeader) {
+            this.progressHeader.hidden = false;
         }
 
         this.progressWrap.style.display = '';
@@ -530,6 +562,24 @@
         this.progressWrap.setAttribute('aria-valuemax', '100');
         this.progressWrap.setAttribute('aria-valuenow', String(Math.round(percent)));
         this.progressWrap.setAttribute('aria-label', this.i18n.progressLabel || 'Formas progress');
+
+        if (this.progressStepLabel) {
+            var current = index + 1;
+            var total = steps.length;
+            var counterTemplate = this.i18n.stepCounter || '%current% no %total%';
+            var stepText = counterTemplate
+                .replace('%current%', '<span class="msf-form__progress-step-current">' + current + '</span>')
+                .replace('%total%', '<span class="msf-form__progress-step-total">' + total + '</span>');
+
+            this.progressStepLabel.innerHTML = stepText;
+            this.progressStepLabel.hidden = total < 2;
+        }
+
+        if (this.progressPercentLabel) {
+            var progressPercent = steps.length ? Math.round(((index + 1) / steps.length) * 100) : 0;
+            this.progressPercentLabel.textContent = progressPercent + '%';
+            this.progressPercentLabel.hidden = steps.length < 2;
+        }
     };
 
     MSForm.prototype.updatePriceBar = function () {
@@ -551,9 +601,20 @@
         }
 
         var result = calculatePricing(this.config, this.getAnswersForPricing(), { estimated: true });
+        var formattedTotal = formatMoney(result.total, result.currency);
+        var shouldFlash = this.lastPriceTotal !== null && this.lastPriceTotal !== formattedTotal;
+
         this.priceBar.hidden = false;
         this.priceBar.innerHTML = '<span class="msf-form__price-label">' + (this.i18n.estimatedPrice || 'Aptuvenā cena') + '</span>'
-            + '<span class="msf-form__price-value">' + formatMoney(result.total, result.currency) + '</span>';
+            + '<span class="msf-form__price-value">' + formattedTotal + '</span>';
+
+        if (shouldFlash) {
+            this.priceBar.classList.remove('msf-form__price-bar--updated');
+            void this.priceBar.offsetWidth;
+            this.priceBar.classList.add('msf-form__price-bar--updated');
+        }
+
+        this.lastPriceTotal = formattedTotal;
     };
 
     MSForm.prototype.readQuestionValue = function (question) {
@@ -911,6 +972,7 @@
 
             var fieldWrap = this.renderField(question);
             var useFieldset = question.type === 'radio' || question.type === 'checkbox' || question.type === 'consent';
+            var titleMatchesLabel = !!(step.title && question.label && step.title.trim() === question.label.trim());
 
             if (useFieldset) {
                 var fieldset = el('fieldset', { className: 'msf-form__fieldset' });
@@ -923,12 +985,14 @@
 
                 fieldset.appendChild(fieldWrap);
                 panel.appendChild(fieldset);
-            } else {
+            } else if (!titleMatchesLabel && question.label) {
                 panel.appendChild(el('label', {
                     className: 'msf-form__label',
                     for: this.fieldInputId(question.id),
                     text: question.label
                 }));
+                panel.appendChild(fieldWrap);
+            } else {
                 panel.appendChild(fieldWrap);
             }
 
@@ -987,6 +1051,10 @@
 
         panel.classList.add('msf-form__step--enter');
 
+        if (this.history.length === 0) {
+            panel.classList.add('msf-form__step--intro');
+        }
+
         var activeFieldWrap = panel._msfFieldWrap || null;
         var activeQuestion = panel._msfQuestion || null;
 
@@ -1015,6 +1083,8 @@
         }
 
         if (nextBtn) {
+            nextBtn.classList.add(isLast ? 'msf-form__btn--submit' : 'msf-form__btn--next');
+
             nextBtn.addEventListener('click', function () {
                 if (self.isSubmitting) {
                     return;
@@ -1045,6 +1115,10 @@
             this.applyStepBodyHeight(panel, step);
         }
 
+        if (activeQuestion && activeQuestion.type === 'number' && activeFieldWrap) {
+            this.initNumberField(activeFieldWrap, activeQuestion);
+        }
+
         window.setTimeout(function () {
             panel.classList.remove('msf-form__step--enter');
         }, 20);
@@ -1058,6 +1132,173 @@
         }
 
         panel.style.setProperty('--msf-transition-ms', transitionMs + 'ms');
+
+        if (activeQuestion && ['text', 'number', 'email', 'tel', 'textarea'].indexOf(activeQuestion.type) !== -1) {
+            window.setTimeout(function () {
+                var focusTarget = self.getQuestionControl(activeQuestion);
+
+                if (focusTarget && typeof focusTarget.focus === 'function') {
+                    try {
+                        focusTarget.focus({ preventScroll: true });
+                    } catch (error) {
+                        focusTarget.focus();
+                    }
+                }
+            }, transitionMs + 40);
+        }
+    };
+
+    MSForm.prototype.isGuestCountQuestion = function (question) {
+        var id = String(question.id || '').toLowerCase();
+        var label = String(question.label || '').toLowerCase();
+
+        return id.indexOf('guest') !== -1 || label.indexOf('vies') !== -1;
+    };
+
+    MSForm.prototype.getNumberPlaceholder = function (question) {
+        if (question.placeholder) {
+            return question.placeholder;
+        }
+
+        if (this.isGuestCountQuestion(question)) {
+            return this.i18n.numberGuestPlaceholder || '80';
+        }
+
+        return this.i18n.numberPlaceholder || 'piemēram, 80';
+    };
+
+    MSForm.prototype.getNumberExampleValues = function (question) {
+        var validation = question.validation || {};
+        var min = parseInt(validation.min, 10);
+        var max = parseInt(validation.max, 10);
+        var candidates = [];
+
+        if (Array.isArray(question.numberExamples) && question.numberExamples.length) {
+            candidates = question.numberExamples.map(function (value) {
+                return parseFloat(value);
+            }).filter(function (value) {
+                return !isNaN(value);
+            });
+        } else if (this.isGuestCountQuestion(question)) {
+            candidates = [50, 80, 100, 150];
+        }
+
+        return candidates.filter(function (value) {
+            if (!isNaN(min) && value < min) {
+                return false;
+            }
+
+            if (!isNaN(max) && value > max) {
+                return false;
+            }
+
+            return true;
+        });
+    };
+
+    MSForm.prototype.getNumberHint = function (question) {
+        var validation = question.validation || {};
+        var min = parseInt(validation.min, 10);
+        var max = parseInt(validation.max, 10);
+
+        if (isNaN(min) || isNaN(max)) {
+            return '';
+        }
+
+        if (this.isGuestCountQuestion(question)) {
+            var example = question.placeholder || this.i18n.numberGuestPlaceholder || '80';
+
+            return (this.i18n.numberRangeExample || 'piemēram, %example% · no %min% līdz %max%')
+                .replace('%example%', example + ' viesi')
+                .replace('%min%', String(min))
+                .replace('%max%', String(max));
+        }
+
+        return (this.i18n.numberRange || 'No %min% līdz %max%')
+            .replace('%min%', String(min))
+            .replace('%max%', String(max));
+    };
+
+    MSForm.prototype.getNumberStep = function (question) {
+        var validation = question.validation || {};
+        var step = parseInt(validation.step, 10);
+
+        if (!isNaN(step) && step > 0) {
+            return step;
+        }
+
+        var max = parseInt(validation.max, 10);
+
+        if (!isNaN(max) && max >= 100) {
+            return 5;
+        }
+
+        return 1;
+    };
+
+    MSForm.prototype.initNumberField = function (wrap, question) {
+        var input = wrap.querySelector('input[type="number"]');
+        var buttons = wrap.querySelectorAll('[data-msf-number-step]');
+        var validation = question.validation || {};
+        var min = parseInt(validation.min, 10);
+        var max = parseInt(validation.max, 10);
+        var step = this.getNumberStep(question);
+        var self = this;
+
+        if (!input || !buttons.length) {
+            return;
+        }
+
+        function clampValue(raw) {
+            var value = parseInt(raw, 10);
+
+            if (isNaN(value)) {
+                return !isNaN(min) ? min : 0;
+            }
+
+            if (!isNaN(min)) {
+                value = Math.max(min, value);
+            }
+
+            if (!isNaN(max)) {
+                value = Math.min(max, value);
+            }
+
+            return value;
+        }
+
+        function setValue(nextValue) {
+            input.value = String(clampValue(nextValue));
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var direction = parseInt(button.getAttribute('data-msf-number-step'), 10) || 0;
+                var current = parseInt(input.value, 10);
+
+                if (isNaN(current)) {
+                    current = !isNaN(min) ? min : 0;
+                }
+
+                setValue(current + (direction * step));
+            });
+        });
+
+        input.addEventListener('blur', function () {
+            if (String(input.value || '').trim() === '') {
+                return;
+            }
+
+            setValue(input.value);
+        });
+
+        wrap.querySelectorAll('[data-msf-number-value]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                setValue(button.getAttribute('data-msf-number-value'));
+                input.focus();
+            });
+        });
     };
 
     MSForm.prototype.goNext = function (currentStep) {
@@ -1103,12 +1344,79 @@
                 wrap.querySelector('textarea').value = value || '';
                 break;
             case 'number':
-                wrap.appendChild(el('input', {
-                    className: 'msf-form__input',
+                var numberValidation = question.validation || {};
+                var numberMin = parseInt(numberValidation.min, 10);
+                var numberMax = parseInt(numberValidation.max, 10);
+                var numberAttrs = {
+                    className: 'msf-form__input msf-form__input--number',
                     id: inputId,
                     type: 'number',
-                    name: question.id
+                    name: question.id,
+                    inputmode: 'numeric',
+                    placeholder: this.getNumberPlaceholder(question)
+                };
+
+                if (!isNaN(numberMin)) {
+                    numberAttrs.min = String(numberMin);
+                }
+
+                if (!isNaN(numberMax)) {
+                    numberAttrs.max = String(numberMax);
+                }
+
+                var numberControl = el('div', { className: 'msf-form__number' });
+                numberControl.appendChild(el('button', {
+                    type: 'button',
+                    className: 'msf-form__number-btn',
+                    'data-msf-number-step': '-1',
+                    'aria-label': this.i18n.numberDecrease || 'Samazināt',
+                    text: '−'
                 }));
+                numberControl.appendChild(el('input', numberAttrs));
+                numberControl.appendChild(el('button', {
+                    type: 'button',
+                    className: 'msf-form__number-btn',
+                    'data-msf-number-step': '1',
+                    'aria-label': this.i18n.numberIncrease || 'Palielināt',
+                    text: '+'
+                }));
+                wrap.appendChild(numberControl);
+
+                var numberHint = this.getNumberHint(question);
+
+                if (numberHint) {
+                    wrap.appendChild(el('p', {
+                        className: 'msf-form__field-hint',
+                        text: numberHint
+                    }));
+                }
+
+                var exampleValues = this.getNumberExampleValues(question);
+
+                if (exampleValues.length) {
+                    var examplesWrap = el('div', { className: 'msf-form__number-examples' });
+                    var examplesLabel = this.i18n.numberExamplesLabel || 'Populāri varianti:';
+
+                    examplesWrap.appendChild(el('p', {
+                        className: 'msf-form__number-examples-label',
+                        text: examplesLabel
+                    }));
+
+                    var exampleButtons = el('div', { className: 'msf-form__number-example-list' });
+
+                    exampleValues.forEach(function (exampleValue) {
+                        exampleButtons.appendChild(el('button', {
+                            type: 'button',
+                            className: 'msf-form__btn msf-form__btn--secondary msf-form__number-example',
+                            'data-msf-number-value': String(exampleValue),
+                            text: String(exampleValue)
+                        }));
+                    });
+
+                    examplesWrap.appendChild(exampleButtons);
+                    wrap.appendChild(examplesWrap);
+                }
+
                 if (value !== undefined) {
                     wrap.querySelector('input').value = value;
                 }

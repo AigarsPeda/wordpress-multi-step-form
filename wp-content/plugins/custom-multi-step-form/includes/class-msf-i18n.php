@@ -31,6 +31,14 @@ class MSF_I18n {
             'invalidPhone'        => __('Lūdzu, ievadiet derīgu tālruņa numuru.', 'custom-multi-step-form'),
             'invalidDate'         => __('Lūdzu, ievadiet derīgu datumu.', 'custom-multi-step-form'),
             'progressLabel'       => __('Formas progress', 'custom-multi-step-form'),
+            'stepCounter'         => __('%current% no %total%', 'custom-multi-step-form'),
+            'numberPlaceholder'   => __('piemēram, 80', 'custom-multi-step-form'),
+            'numberGuestPlaceholder' => __('80', 'custom-multi-step-form'),
+            'numberRange'         => __('No %min% līdz %max%', 'custom-multi-step-form'),
+            'numberRangeExample'  => __('piemēram, %example% · no %min% līdz %max%', 'custom-multi-step-form'),
+            'numberExamplesLabel' => __('Populāri varianti:', 'custom-multi-step-form'),
+            'numberDecrease'      => __('Samazināt', 'custom-multi-step-form'),
+            'numberIncrease'      => __('Palielināt', 'custom-multi-step-form'),
         );
 
         return apply_filters('msf_runtime_i18n', $strings);
