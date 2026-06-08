@@ -36,7 +36,8 @@ class MSF_I18n {
             'numberGuestPlaceholder' => __('80', 'custom-multi-step-form'),
             'numberRange'         => __('No %min% līdz %max%', 'custom-multi-step-form'),
             'numberRangeExample'  => __('piemēram, %example% · no %min% līdz %max%', 'custom-multi-step-form'),
-            'numberExamplesLabel' => __('Populāri varianti:', 'custom-multi-step-form'),
+            'numberExamplesLabel' => __('Populāri varianti', 'custom-multi-step-form'),
+            'dateExamplesLabel'   => __('Populāri varianti', 'custom-multi-step-form'),
             'numberDecrease'      => __('Samazināt', 'custom-multi-step-form'),
             'numberIncrease'      => __('Palielināt', 'custom-multi-step-form'),
         );

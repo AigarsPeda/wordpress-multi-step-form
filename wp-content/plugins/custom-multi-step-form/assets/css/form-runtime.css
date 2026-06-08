@@ -47,24 +47,27 @@
 }
 
 .msf-form__progress-header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.1rem;
 }
 
 .msf-form__progress-meta {
     display: flex;
-    align-items: baseline;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 1rem;
+    width: 100%;
     margin-bottom: 0.55rem;
 }
 
 .msf-form__progress-step {
     margin: 0;
+    padding: 0;
     font-size: var(--msf-text-sm);
     font-weight: 500;
     letter-spacing: 0.01em;
     color: var(--msf-color-text-muted);
     line-height: 1.4;
+    flex: 0 1 auto;
 }
 
 .msf-form__progress-step-current,
@@ -75,12 +78,30 @@
     color: var(--msf-color-primary);
 }
 
-.msf-form__progress-percent {
-    flex-shrink: 0;
-    font-size: var(--msf-text-sm);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--msf-color-text-muted);
+.msf-form__progress-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    flex: 0 0 auto;
+    margin-left: auto;
+    text-align: right;
+}
+
+.msf-form__progress-price .msf-form__price-value {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.msf-form__progress-price .msf-form__price-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.msf-form__progress-price--updated .msf-form__price-value {
+    animation: msf-price-flash 0.55s ease;
 }
 
 .msf-form__progress {
@@ -115,7 +136,7 @@
 }
 
 .msf-form__step-title {
-    margin: 0 0 0.35rem;
+    margin: 0 0 1rem;
     font-size: var(--msf-text-step);
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -250,11 +271,11 @@
 }
 
 .msf-form__number-examples {
-    margin-top: 0.9rem;
+    margin-top: 0.75rem;
 }
 
 .msf-form__number-examples-label {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.45rem;
     font-size: var(--msf-text-sm);
     font-weight: 600;
     color: var(--msf-color-text-muted);
@@ -532,6 +553,10 @@
     transition: background-color 0.3s ease;
 }
 
+.msf-form__price-bar[hidden] {
+    display: none !important;
+}
+
 .msf-form__price-bar--updated {
     animation: msf-price-flash 0.55s ease;
 }
@@ -715,6 +740,74 @@
     background-color: var(--msf-color-progress-fill) !important;
     background-image: none !important;
     box-shadow: none !important;
+}
+
+.fusion-body .msf-form .msf-form__progress-header,
+.fusion-body .msf-form .msf-form__progress-meta,
+.fusion-body .msf-form .msf-form__progress-price,
+.fusion-body .msf-form .msf-form__number,
+.fusion-body .msf-form .msf-form__number-example-list {
+    float: none !important;
+    clear: none !important;
+}
+
+.fusion-body .msf-form .msf-form__progress-meta {
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    margin: 0 0 0.55rem !important;
+}
+
+.fusion-body .msf-form .msf-form__progress-step {
+    display: block !important;
+    float: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fusion-body .msf-form .msf-form__progress-price {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+    text-align: right !important;
+}
+
+.fusion-body .msf-form .msf-form__progress-price .msf-form__price-value {
+    color: var(--msf-color-price-text, var(--msf-color-text)) !important;
+    font-weight: 600 !important;
+}
+
+.fusion-body .msf-form .msf-form__progress-step-current,
+.fusion-body .msf-form .msf-form__progress-step-total {
+    color: var(--msf-color-primary) !important;
+}
+
+.fusion-body .msf-form .msf-form__number-btn,
+.fusion-body .msf-form .msf-form__number-example,
+.fusion-body .msf-form .msf-form__date-shortcut {
+    background-color: var(--msf-color-muted-bg) !important;
+    color: var(--msf-color-text) !important;
+    border: 1.5px solid var(--msf-color-border) !important;
+    box-shadow: none !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+.fusion-body .msf-form .msf-form__number-examples-label {
+    color: var(--msf-color-text-muted) !important;
+    text-transform: none !important;
+}
+
+.fusion-body .msf-form .msf-form__price-bar[hidden] {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
 }
 
 .msf-form--preview {

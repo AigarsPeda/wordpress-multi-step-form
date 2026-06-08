@@ -33,8 +33,11 @@ $style_attr     = !empty($inline_styles) ? ' style="' . esc_attr(implode('; ', $
 
     <div class="msf-form__progress-header">
         <div class="msf-form__progress-meta">
-            <p class="msf-form__progress-step" hidden></p>
-            <span class="msf-form__progress-percent" hidden></span>
+            <div class="msf-form__progress-step" hidden></div>
+            <div class="msf-form__progress-price" hidden>
+                <span class="msf-form__price-label"><?php echo esc_html(MSF_I18n::runtime_strings()['estimatedPrice']); ?></span>
+                <span class="msf-form__price-value"></span>
+            </div>
         </div>
         <div class="msf-form__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="<?php echo esc_attr(MSF_I18n::runtime_strings()['progressLabel']); ?>"><div class="msf-form__progress-bar"></div></div>
     </div>

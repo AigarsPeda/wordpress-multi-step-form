@@ -243,7 +243,7 @@ class MSF_Admin {
                 'numberMin'      => __('Minimum value', 'custom-multi-step-form'),
                 'numberMax'      => __('Maximum value', 'custom-multi-step-form'),
                 'numberPlaceholder' => __('Example placeholder', 'custom-multi-step-form'),
-                'numberPlaceholderHelp' => __('Shown inside the field before the user types, e.g. 80', 'custom-multi-step-form'),
+                'numberPlaceholderHelp' => __('Use a number only (e.g. 80). Leave empty when the question title is already shown above.', 'custom-multi-step-form'),
                 'numberExamples' => __('Quick-pick values', 'custom-multi-step-form'),
                 'numberExamplesHelp' => __('Comma-separated numbers for shortcut buttons, e.g. 50, 80, 100, 150', 'custom-multi-step-form'),
                 'textFormat'     => __('Text validation', 'custom-multi-step-form'),

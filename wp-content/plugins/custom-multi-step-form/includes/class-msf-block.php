@@ -30,6 +30,24 @@ class MSF_Block {
         );
 
         $content = preg_replace(
+            '#(<div class="msf-form__progress-meta"[^>]*>)\s*</p>#',
+            '$1',
+            $content
+        );
+
+        $content = preg_replace(
+            '#(<div class="msf-form__progress-step"[^>]*>)\s*</p>#',
+            '$1',
+            $content
+        );
+
+        $content = preg_replace(
+            '#</p>\s*(</div>\s*<div class="msf-form__progress")#',
+            '$1',
+            $content
+        );
+
+        $content = preg_replace(
             '#(<div class="msf-form__body">)\s*<p class="msf-form__loading">([^<]*)</p>\s*</p>#',
             '$1<p class="msf-form__loading">$2</p>',
             $content
