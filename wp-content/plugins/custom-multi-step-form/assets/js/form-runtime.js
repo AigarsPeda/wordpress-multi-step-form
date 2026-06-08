@@ -600,7 +600,11 @@
   };
 
   MSForm.prototype.saveSession = function () {
-    if (!this.formId || this.isPreview || typeof window.sessionStorage === "undefined") {
+    if (
+      !this.formId ||
+      this.isPreview ||
+      typeof window.sessionStorage === "undefined"
+    ) {
       return;
     }
 
@@ -646,7 +650,11 @@
   };
 
   MSForm.prototype.restoreSession = function () {
-    if (!this.formId || this.isPreview || typeof window.sessionStorage === "undefined") {
+    if (
+      !this.formId ||
+      this.isPreview ||
+      typeof window.sessionStorage === "undefined"
+    ) {
       return false;
     }
 
@@ -684,7 +692,9 @@
     }
 
     this.answers = payload.answers;
-    this.history = Array.isArray(payload.history) ? payload.history.slice() : [];
+    this.history = Array.isArray(payload.history)
+      ? payload.history.slice()
+      : [];
     this.currentStepId = payload.currentStepId || null;
     this.progressTotalBaseline = payload.progressTotalBaseline || null;
 
@@ -840,11 +850,7 @@
     var current = this.history.length + 1;
     var total = Math.max(this.progressTotalBaseline || steps.length, current);
     var isLast = steps.length > 0 && index >= steps.length - 1;
-    var percent = isLast
-      ? 100
-      : total
-        ? (current / total) * 100
-        : 0;
+    var percent = isLast ? 100 : total ? (current / total) * 100 : 0;
 
     this.progressBar.style.width = percent + "%";
     this.progressWrap.setAttribute("role", "progressbar");
@@ -1573,7 +1579,11 @@
 
     if (question && questionAllowsEnterAdvance(question)) {
       panel.addEventListener("keydown", function (event) {
-        if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) {
+        if (
+          event.key !== "Enter" ||
+          event.defaultPrevented ||
+          event.isComposing
+        ) {
           return;
         }
 
@@ -1984,8 +1994,7 @@
             exampleButtons.appendChild(
               el("button", {
                 type: "button",
-                className:
-                  "msf-form__quick-pick msf-form__number-example",
+                className: "msf-form__quick-pick msf-form__number-example",
                 "data-msf-number-value": String(exampleValue),
                 text: String(exampleValue),
               }),
@@ -2089,9 +2098,9 @@
           ["quarter", this.i18n.dateAfterThreeMonths || "Pēc 3 mēnešiem"],
         ];
         var dateExamplesLabel =
-          this.i18n.dateExamplesLabel
-          || this.i18n.numberExamplesLabel
-          || "Populāri varianti";
+          this.i18n.dateExamplesLabel ||
+          this.i18n.numberExamplesLabel ||
+          "Populāri varianti";
         var dateExamplesWrap = el("div", {
           className: "msf-form__number-examples msf-form__date-examples",
         });
