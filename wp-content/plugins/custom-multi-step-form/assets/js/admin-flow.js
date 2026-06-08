@@ -750,52 +750,36 @@
     }
 
     function centerOnDrawflowNode(drawflowId) {
-        var node;
         var el;
         var container;
-        var viewWidth;
-        var viewHeight;
-        var zoom;
-        var nodeWidth;
-        var nodeHeight;
-        var nodeX;
-        var nodeY;
-        var centerX;
-        var centerY;
+        var containerRect;
+        var nodeRect;
+        var deltaX;
+        var deltaY;
 
         if (!editor || !drawflowId) {
             return false;
         }
 
-        node = getHomeData()[drawflowId];
         el = document.getElementById('node-' + drawflowId);
 
-        if (!node || !el) {
+        if (!el) {
             return false;
         }
 
         container = $canvas[0];
-        viewWidth = container.clientWidth;
-        viewHeight = container.clientHeight;
-        zoom = editor.zoom;
-        nodeWidth = el.offsetWidth;
-        nodeHeight = el.offsetHeight;
-        nodeX = parseFloat(node.pos_x, 10);
 
-        if (isNaN(nodeX)) {
-            nodeX = el.offsetLeft;
+        if (!container.clientWidth || !container.clientHeight) {
+            return false;
         }
 
-        nodeY = parseFloat(node.pos_y, 10);
+        containerRect = container.getBoundingClientRect();
+        nodeRect = el.getBoundingClientRect();
+        deltaX = (containerRect.left + containerRect.width / 2) - (nodeRect.left + nodeRect.width / 2);
+        deltaY = (containerRect.top + containerRect.height / 2) - (nodeRect.top + nodeRect.height / 2);
 
-        if (isNaN(nodeY)) {
-            nodeY = el.offsetTop;
-        }
-
-        centerX = nodeX + nodeWidth / 2;
-        centerY = nodeY + nodeHeight / 2;
-        editor.canvas_x = viewWidth / 2 - centerX * zoom;
-        editor.canvas_y = viewHeight / 2 - centerY * zoom;
+        editor.canvas_x += deltaX;
+        editor.canvas_y += deltaY;
         resetDrawflowDragState();
         applyCanvasTransform();
 

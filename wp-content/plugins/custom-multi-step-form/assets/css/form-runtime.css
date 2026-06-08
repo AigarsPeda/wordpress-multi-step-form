@@ -129,7 +129,8 @@
     background: var(--msf-color-input-bg);
     color: var(--msf-color-text);
     font: inherit;
-    font-size: var(--msf-text-body);
+    /* iOS Safari zooms focused fields below 16px computed size. */
+    font-size: max(16px, var(--msf-text-body));
     line-height: 1.5;
     box-sizing: border-box;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
@@ -480,6 +481,7 @@
     color: var(--msf-color-text) !important;
     border-color: var(--msf-color-border) !important;
     box-shadow: none !important;
+    font-size: max(16px, var(--msf-text-body)) !important;
 }
 
 .fusion-body .msf-form .msf-form__step-title,

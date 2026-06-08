@@ -54,4 +54,5 @@
 
 .msf-form__date-picker-wrap .flatpickr-input.form-control {
     width: 100%;
+    font-size: max(16px, var(--msf-text-body, 1rem));
 }
