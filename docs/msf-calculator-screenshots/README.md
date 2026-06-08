@@ -16,7 +16,7 @@ Mobile/desktop form UI: progress (`1 no 9`), price bar, number input with +/- an
 
 ## 2. Admin — flow builder
 
-Branching logic after “Izvēlieties pasākuma veidu” (wedding vs corporate paths).
+Branching logic after “Izvēlieties pasākuma veidu” (Kāzas, Korporatīvais pasākums, Dzimšanas diena, Bērnu ballīte).
 
 ![Admin flow builder](2.jpg)
 

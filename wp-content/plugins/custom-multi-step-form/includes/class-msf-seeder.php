@@ -8,7 +8,7 @@ class MSF_Seeder {
 
     const OPTION_KEY = 'msf_sample_form_seeded';
     const CONFIG_VERSION_KEY = 'msf_sample_form_config_version';
-    const CONFIG_VERSION = 4;
+    const CONFIG_VERSION = 5;
 
     public static function get_banquet_quote_config() {
         $config = MSF_Form_Config::default_config();
@@ -67,9 +67,9 @@ class MSF_Seeder {
                         'required' => true,
                         'options'  => array(
                             array('value' => 'wedding', 'label' => 'Kāzas'),
-                            array('value' => 'corporate', 'label' => 'Korporatīvs pasākums'),
-                            array('value' => 'private', 'label' => 'Privāts pasākums'),
-                            array('value' => 'other', 'label' => 'Cits'),
+                            array('value' => 'corporate', 'label' => 'Korporatīvais pasākums'),
+                            array('value' => 'birthday', 'label' => 'Dzimšanas diena'),
+                            array('value' => 'children_party', 'label' => 'Bērnu ballīte'),
                         ),
                     ),
                 ),
@@ -88,20 +88,21 @@ class MSF_Seeder {
                         'required' => true,
                         'options'  => array(
                             array(
-                                'value'       => 'buffet',
-                                'label'       => 'Bufets',
+                                'value'       => 'cold_table',
+                                'label'       => 'Aukstais galds / uzkodas',
                                 'priceEffect' => array('add' => 5, 'perGuest' => true),
                             ),
                             array(
-                                'value'       => 'plated',
-                                'label'       => 'Porcijās pasniegts',
+                                'value'       => 'hot_cold_table',
+                                'label'       => 'Siltais un aukstais galds / uzkodas',
                                 'priceEffect' => array('add' => 12, 'perGuest' => true),
                             ),
                             array(
                                 'value'       => 'coffee',
-                                'label'       => 'Kafijas pauze / uzkodas',
+                                'label'       => 'Kafijas pauze uzkodas',
                                 'priceEffect' => array('add' => 3, 'perGuest' => true),
                             ),
+                            array('value' => 'other', 'label' => 'Cits'),
                         ),
                     ),
                 ),
@@ -329,12 +330,50 @@ class MSF_Seeder {
     /**
      * @return int Post ID or 0 on failure.
      */
+    /**
+     * Keep site-specific settings when refreshing the sample form config.
+     *
+     * @param array|null $existing
+     * @param array      $fresh
+     * @return array
+     */
+    private static function merge_preserved_form_settings($existing, $fresh) {
+        if (!is_array($existing)) {
+            return $fresh;
+        }
+
+        $preserve_settings = array('customCss', 'pageCss', 'ownerEmail');
+
+        foreach ($preserve_settings as $key) {
+            if (
+                !empty($existing['settings'][$key])
+                && is_string($existing['settings'][$key])
+            ) {
+                $fresh['settings'][$key] = $existing['settings'][$key];
+            }
+        }
+
+        if (
+            !empty($existing['flowLayout'])
+            && is_array($existing['flowLayout'])
+            && !empty($existing['flowLayout']['nodes'])
+        ) {
+            $fresh['flowLayout'] = $existing['flowLayout'];
+        }
+
+        return $fresh;
+    }
+
     public static function create_banquet_quote_form() {
         $existing = get_page_by_title('Banketu piedāvājums', OBJECT, 'msf_form');
 
         if ($existing instanceof WP_Post) {
             $form_id = (int) $existing->ID;
-            MSF_Form_Config::save($form_id, self::get_banquet_quote_config());
+            $config  = self::merge_preserved_form_settings(
+                MSF_Form_Config::get($form_id),
+                self::get_banquet_quote_config()
+            );
+            MSF_Form_Config::save($form_id, $config);
             update_option(self::OPTION_KEY, $form_id);
             update_option(self::CONFIG_VERSION_KEY, self::CONFIG_VERSION);
 
