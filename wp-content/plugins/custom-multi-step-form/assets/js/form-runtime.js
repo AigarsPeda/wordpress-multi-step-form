@@ -1406,8 +1406,10 @@
     var fieldWrap = this.renderField(question, {
       headingShown: hasStepTitle,
     });
-    var showSecondaryLabel =
-      !useFieldset && (hasStepTitle || context.questionIndex > 0) && question.label;
+    var showFieldLabel =
+      !useFieldset &&
+      question.label &&
+      (!hasStepTitle || !titleMatchesLabel || context.questionIndex > 0);
     var showDescription =
       question.description && !numberExamples.length && !useFieldset;
 
@@ -1430,39 +1432,21 @@
 
       fieldset.appendChild(fieldWrap);
       questionBlock.appendChild(fieldset);
-    } else if (showSecondaryLabel && !titleMatchesLabel) {
-      questionBlock.appendChild(
-        el("label", {
-          className: "msf-form__label",
-          for: this.fieldInputId(question.id),
-          text: question.label,
-        }),
-      );
-
-      if (showDescription) {
-        questionBlock.appendChild(
-          el("p", {
-            className: "msf-form__question-description",
-            text: question.description,
-          }),
-        );
-      }
-
-      questionBlock.appendChild(fieldWrap);
-    } else if (!hasStepTitle && question.label && context.questionIndex === 0) {
-      var soloTitleId = interactive
-        ? this.fieldInputId(step.id, "question-title")
+    } else if (showFieldLabel) {
+      var fieldLabelId = interactive
+        ? this.fieldInputId(question.id, "label")
         : "";
-      var soloTitleAttrs = {
-        className: "msf-form__step-title",
+      var fieldLabelAttrs = {
+        className: "msf-form__label",
+        for: this.fieldInputId(question.id),
         text: question.label,
       };
 
-      if (soloTitleId) {
-        soloTitleAttrs.id = soloTitleId;
+      if (fieldLabelId) {
+        fieldLabelAttrs.id = fieldLabelId;
       }
 
-      questionBlock.appendChild(el("h3", soloTitleAttrs));
+      questionBlock.appendChild(el("label", fieldLabelAttrs));
 
       if (showDescription) {
         questionBlock.appendChild(
@@ -1475,8 +1459,8 @@
 
       questionBlock.appendChild(fieldWrap);
 
-      if (soloTitleId) {
-        panel.setAttribute("aria-labelledby", soloTitleId);
+      if (!hasStepTitle && context.questionIndex === 0 && fieldLabelId) {
+        panel.setAttribute("aria-labelledby", fieldLabelId);
       }
     } else {
       if (showDescription) {
