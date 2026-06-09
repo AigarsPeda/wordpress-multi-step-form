@@ -8,7 +8,7 @@ class MSF_Seeder {
 
     const OPTION_KEY = 'msf_sample_form_seeded';
     const CONFIG_VERSION_KEY = 'msf_sample_form_config_version';
-    const CONFIG_VERSION = 7;
+    const CONFIG_VERSION = 8;
 
     public static function get_banquet_quote_config() {
         $config = MSF_Form_Config::default_config();
@@ -176,24 +176,29 @@ class MSF_Seeder {
                         'required' => false,
                         'options'  => array(
                             array(
-                                'value' => 'disposable_tableware',
-                                'label' => 'Nepieciešami vienreizējie trauki',
+                                'value'       => 'disposable_tableware',
+                                'label'       => 'Nepieciešami vienreizējie trauki',
+                                'priceEffect' => array('add' => 2, 'perGuest' => true),
                             ),
                             array(
-                                'value' => 'ceramic_tableware',
-                                'label' => 'Nepieciešami īstie keramikas trauki',
+                                'value'       => 'ceramic_tableware',
+                                'label'       => 'Nepieciešami īstie keramikas trauki',
+                                'priceEffect' => array('add' => 5, 'perGuest' => true),
                             ),
                             array(
-                                'value' => 'table_setting',
-                                'label' => 'Nepieciešama galdu klāšana',
+                                'value'       => 'table_setting',
+                                'label'       => 'Nepieciešama galdu klāšana',
+                                'priceEffect' => array('add' => 3, 'perGuest' => true),
                             ),
                             array(
-                                'value' => 'delivery',
-                                'label' => 'Nepieciešama piegāde',
+                                'value'       => 'delivery',
+                                'label'       => 'Nepieciešama piegāde',
+                                'priceEffect' => array('add' => 1.5, 'perGuest' => true),
                             ),
                             array(
-                                'value' => 'service',
-                                'label' => 'Nepieciešama apkalpošana (viesmīlis)',
+                                'value'       => 'service',
+                                'label'       => 'Nepieciešama apkalpošana (viesmīlis)',
+                                'priceEffect' => array('add' => 10, 'perGuest' => true),
                             ),
                         ),
                     ),
