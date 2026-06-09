@@ -9,20 +9,45 @@ body.has-msf-form #wrapper {
 body.has-msf-form #main {
   flex: 1 0 auto;
   padding-bottom: 0 !important;
+  background: transparent !important;
 }
 
 body.has-msf-form .fusion-footer {
   flex-shrink: 0;
 }
 
-/* Mobile: small side margins instead of Avada's large gutters */
+/* Remove Avada’s extra dark “card” around the form */
+body.has-msf-form .post-content,
+body.has-msf-form .fusion-fullwidth,
+body.has-msf-form .fusion-builder-row,
+body.has-msf-form .fusion-layout-column,
+body.has-msf-form .fusion-column-wrapper,
+body.has-msf-form .fusion-column-has-shadow,
+body.has-msf-form .fusion-text {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Remove fixed height if you added it earlier — it leaves empty dark space */
+body.has-msf-form .post-content {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* Mobile: small side padding (Avada fusion-row uses negative margins by default) */
 @media (max-width: 767px) {
   body.has-msf-form #main {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 
   body.has-msf-form #main > .fusion-row,
+  body.has-msf-form .fusion-builder-row.fusion-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100% !important;
+  }
+
   body.has-msf-form #main #content,
   body.has-msf-form #content .post-content,
   body.has-msf-form .fusion-fullwidth,
@@ -39,8 +64,10 @@ body.has-msf-form .fusion-footer {
   body.has-msf-form #msf-form-3247 {
     --msf-max-width: 100%;
     max-width: 100%;
-    padding-left: 0;
-    padding-right: 0;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
     box-sizing: border-box;
   }
 }

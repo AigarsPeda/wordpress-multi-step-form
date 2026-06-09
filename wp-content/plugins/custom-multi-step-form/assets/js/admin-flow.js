@@ -384,6 +384,7 @@
         var numberMin = (question.validation && question.validation.min != null) ? question.validation.min : '';
         var numberMax = (question.validation && question.validation.max != null) ? question.validation.max : '';
         var numberPlaceholder = question.placeholder || '';
+        var numberEmptyPlaceholder = !!question.emptyPlaceholder;
         var numberExamples = numberExamplesToText(question.numberExamples);
 
         html = ''
@@ -407,7 +408,9 @@
             + '<p><label>' + escapeHtml(msfAdmin.i18n.numberMax || 'Maximum value') + '<br>'
             + '<input type="number" class="small-text msf-flow-inspector-number-max" step="1" value="' + escapeAttr(numberMax) + '"></label></p>'
             + '<p><label>' + escapeHtml(msfAdmin.i18n.numberPlaceholder || 'Example placeholder') + '<br>'
-            + '<input type="text" class="regular-text msf-flow-inspector-number-placeholder" value="' + escapeAttr(numberPlaceholder) + '"></label></p>'
+            + '<input type="text" class="regular-text msf-flow-inspector-number-placeholder" value="' + escapeAttr(numberPlaceholder) + '"' + (numberEmptyPlaceholder ? ' disabled' : '') + '></label></p>'
+            + '<p><label><input type="checkbox" class="msf-flow-inspector-number-empty-placeholder"' + (numberEmptyPlaceholder ? ' checked' : '') + '> '
+            + escapeHtml(msfAdmin.i18n.numberEmptyPlaceholder || 'Leave placeholder empty') + '</label></p>'
             + '<p class="description">' + escapeHtml(msfAdmin.i18n.numberPlaceholderHelp || '') + '</p>'
             + '<p><label>' + escapeHtml(msfAdmin.i18n.numberExamples || 'Quick-pick values') + '<br>'
             + '<input type="text" class="widefat msf-flow-inspector-number-examples" value="' + escapeAttr(numberExamples) + '"></label></p>'
@@ -1244,10 +1247,17 @@
                 max: maxValue === '' ? null : parseFloat(maxValue)
             };
 
-            if (placeholderValue) {
-                data.question.placeholder = placeholderValue;
-            } else {
+            if ($inspector.find('.msf-flow-inspector-number-empty-placeholder').is(':checked')) {
+                data.question.emptyPlaceholder = true;
                 delete data.question.placeholder;
+            } else {
+                delete data.question.emptyPlaceholder;
+
+                if (placeholderValue) {
+                    data.question.placeholder = placeholderValue;
+                } else {
+                    delete data.question.placeholder;
+                }
             }
 
             if (exampleValues.length) {
@@ -1263,7 +1273,12 @@
         $inspector.find('.msf-flow-inspector-number-wrap').hide();
     }
 
-    $inspector.on('input change', '.msf-flow-inspector-title, .msf-flow-inspector-label, .msf-flow-inspector-type, .msf-flow-inspector-required, .msf-flow-inspector-options, .msf-flow-inspector-number-min, .msf-flow-inspector-number-max, .msf-flow-inspector-number-placeholder, .msf-flow-inspector-number-examples', function () {
+    $inspector.on('change', '.msf-flow-inspector-number-empty-placeholder', function () {
+        var disabled = $(this).is(':checked');
+        $inspector.find('.msf-flow-inspector-number-placeholder').prop('disabled', disabled);
+    });
+
+    $inspector.on('input change', '.msf-flow-inspector-title, .msf-flow-inspector-label, .msf-flow-inspector-type, .msf-flow-inspector-required, .msf-flow-inspector-options, .msf-flow-inspector-number-min, .msf-flow-inspector-number-max, .msf-flow-inspector-number-placeholder, .msf-flow-inspector-number-empty-placeholder, .msf-flow-inspector-number-examples', function () {
         if (!selectedDrawflowId || !editor) {
             return;
         }

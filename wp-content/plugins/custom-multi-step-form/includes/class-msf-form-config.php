@@ -358,6 +358,10 @@ class MSF_Form_Config {
                 $normalized['placeholder'] = $placeholder;
             }
 
+            if (!empty($question['emptyPlaceholder'])) {
+                $normalized['emptyPlaceholder'] = true;
+            }
+
             $examples = self::normalize_number_examples(
                 isset($question['numberExamples']) ? $question['numberExamples'] : array(),
                 $validation

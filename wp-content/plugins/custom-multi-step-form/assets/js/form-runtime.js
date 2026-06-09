@@ -1802,6 +1802,11 @@
 
   MSForm.prototype.getNumberPlaceholder = function (question, fieldOptions) {
     fieldOptions = fieldOptions || {};
+
+    if (question.emptyPlaceholder) {
+      return "";
+    }
+
     var configured = question.placeholder
       ? String(question.placeholder).trim()
       : "";

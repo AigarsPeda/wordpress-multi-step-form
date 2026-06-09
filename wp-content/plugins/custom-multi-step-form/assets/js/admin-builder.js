@@ -139,6 +139,7 @@
         var numberMin = (question.validation && question.validation.min != null) ? question.validation.min : '';
         var numberMax = (question.validation && question.validation.max != null) ? question.validation.max : '';
         var numberPlaceholder = question.placeholder || '';
+        var numberEmptyPlaceholder = !!question.emptyPlaceholder;
         var numberExamples = numberExamplesToText(question.numberExamples);
 
         var html = '<div class="msf-step-card" data-index="' + index + '">';
@@ -167,7 +168,8 @@
         html += '<div class="msf-number-wrap"' + numberDisplay + '>';
         html += '<p><label>' + msfAdmin.i18n.numberMin + '<br><input type="number" class="small-text msf-number-min" step="1" value="' + escapeAttr(numberMin) + '"></label></p>';
         html += '<p><label>' + msfAdmin.i18n.numberMax + '<br><input type="number" class="small-text msf-number-max" step="1" value="' + escapeAttr(numberMax) + '"></label></p>';
-        html += '<p><label>' + msfAdmin.i18n.numberPlaceholder + '<br><input type="text" class="regular-text msf-number-placeholder" value="' + escapeAttr(numberPlaceholder) + '"></label></p>';
+        html += '<p><label>' + msfAdmin.i18n.numberPlaceholder + '<br><input type="text" class="regular-text msf-number-placeholder" value="' + escapeAttr(numberPlaceholder) + '"' + (numberEmptyPlaceholder ? ' disabled' : '') + '></label></p>';
+        html += '<p><label><input type="checkbox" class="msf-number-empty-placeholder"' + (numberEmptyPlaceholder ? ' checked' : '') + '> ' + (msfAdmin.i18n.numberEmptyPlaceholder || 'Leave placeholder empty') + '</label></p>';
         html += '<p class="description">' + (msfAdmin.i18n.numberPlaceholderHelp || '') + '</p>';
         html += '<p><label>' + msfAdmin.i18n.numberExamples + '<br><input type="text" class="widefat msf-number-examples" value="' + escapeAttr(numberExamples) + '"></label></p>';
         html += '<p class="description">' + (msfAdmin.i18n.numberExamplesHelp || '') + '</p>';
@@ -408,8 +410,17 @@
                     max: maxValue === '' ? null : parseFloat(maxValue)
                 };
 
-                if (placeholderValue) {
-                    question.placeholder = placeholderValue;
+                if ($card.find('.msf-number-empty-placeholder').is(':checked')) {
+                    question.emptyPlaceholder = true;
+                    delete question.placeholder;
+                } else {
+                    delete question.emptyPlaceholder;
+
+                    if (placeholderValue) {
+                        question.placeholder = placeholderValue;
+                    } else {
+                        delete question.placeholder;
+                    }
                 }
 
                 if (exampleValues.length) {
@@ -515,6 +526,11 @@
 
         if ($(this).hasClass('msf-visibility-mode')) {
             $card.find('.msf-visibility-conditions').toggle($(this).val() === 'conditional');
+        }
+
+        if ($(this).hasClass('msf-number-empty-placeholder')) {
+            var disabled = $(this).is(':checked');
+            $card.find('.msf-number-placeholder').prop('disabled', disabled);
         }
 
         syncHidden();

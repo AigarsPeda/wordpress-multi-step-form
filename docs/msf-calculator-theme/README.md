@@ -13,4 +13,10 @@ After pasting: **Update** the form, then hard-refresh `/calculator/` (Cmd+Shift+
 
 Also on the **calculator page** in the block editor: select the Multi Step Form block → sidebar **Appearance** → set **Accent color** to `#d81b60` (otherwise the block inline style can keep default blue).
 
+### Dark box around the form?
+
+That outer band is usually **Avada** `fusion-column-has-shadow` + a fixed `.post-content { height: 70.5vh }`. Use the updated [page-layout-css.css](page-layout-css.css) (transparent wrappers + `height: auto`).
+
+Optional: in Avada page builder, select the column → disable **Box shadow** / column background.
+
 **Tip:** Before importing JSON, click **Export JSON** so you keep a backup with `settings.customCss` and `settings.pageCss`.
