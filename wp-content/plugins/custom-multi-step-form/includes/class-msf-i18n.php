@@ -40,6 +40,8 @@ class MSF_I18n {
             'dateExamplesLabel'   => __('Populāri varianti', 'custom-multi-step-form'),
             'numberDecrease'      => __('Samazināt', 'custom-multi-step-form'),
             'numberIncrease'      => __('Palielināt', 'custom-multi-step-form'),
+            'startOver'           => __('Sākt no jauna', 'custom-multi-step-form'),
+            'startOverConfirm'    => __('Vai tiešām vēlaties dzēst saglabātās atbildes?', 'custom-multi-step-form'),
         );
 
         return apply_filters('msf_runtime_i18n', $strings);

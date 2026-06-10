@@ -465,6 +465,9 @@
         numberExamplesLabel: "Populāri varianti",
         numberDecrease: "Samazināt",
         numberIncrease: "Palielināt",
+        startOver: "Sākt no jauna",
+        startOverConfirm:
+          "Vai tiešām vēlaties dzēst saglabātās atbildes?",
       };
   }
 
@@ -645,6 +648,7 @@
     this._sessionSaveTimer = window.setTimeout(function () {
       self._sessionSaveTimer = null;
       self.saveSession();
+      self.updateStartOverVisibility();
     }, 400);
   };
 
@@ -658,6 +662,74 @@
     } catch (error) {
       // Ignore storage errors.
     }
+  };
+
+  MSForm.prototype.hasFormProgress = function () {
+    if (this.history.length > 0) {
+      return true;
+    }
+
+    if (Object.keys(this.fileAnswers).length > 0) {
+      return true;
+    }
+
+    return Object.keys(this.answers).some(
+      function (key) {
+        var value = this.answers[key];
+
+        return value !== undefined && value !== null && value !== "";
+      }.bind(this),
+    );
+  };
+
+  MSForm.prototype.updateStartOverVisibility = function () {
+    if (this.isPreview || !this.body) {
+      return;
+    }
+
+    var resetWrap = this.body.querySelector(".msf-form__session-reset");
+
+    if (!resetWrap) {
+      return;
+    }
+
+    resetWrap.hidden = !this.hasFormProgress();
+  };
+
+  MSForm.prototype.handleStartOver = function () {
+    var message =
+      this.i18n.startOverConfirm ||
+      "Vai tiešām vēlaties dzēst saglabātās atbildes?";
+
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    this.resetFormToStart();
+  };
+
+  MSForm.prototype.resetFormToStart = function () {
+    if (this._sessionSaveTimer) {
+      window.clearTimeout(this._sessionSaveTimer);
+      this._sessionSaveTimer = null;
+    }
+
+    this.clearSession();
+    this.answers = {};
+    this.fileAnswers = {};
+    this.history = [];
+    this.progressTotalBaseline = null;
+    this.lastPriceTotal = null;
+
+    var first = this.getVisibleSteps()[0];
+
+    if (!first) {
+      return;
+    }
+
+    this.currentStepId = first.id;
+    this.syncProgressBaseline(this.getVisibleSteps());
+    this.renderStep();
   };
 
   MSForm.prototype.restoreSession = function () {
@@ -1581,6 +1653,21 @@
 
     panel.appendChild(actions);
 
+    if (interactive && !this.isPreview) {
+      var footer = el("div", { className: "msf-form__step-footer" });
+      var resetWrap = el("div", { className: "msf-form__session-reset" });
+      resetWrap.hidden = true;
+      resetWrap.appendChild(
+        el("button", {
+          type: "button",
+          className: "msf-form__start-over",
+          text: this.i18n.startOver || "Sākt no jauna",
+        }),
+      );
+      footer.appendChild(resetWrap);
+      panel.appendChild(footer);
+    }
+
     return panel;
   };
 
@@ -1633,6 +1720,14 @@
       });
     }
 
+    var startOverBtn = panel.querySelector(".msf-form__start-over");
+
+    if (startOverBtn) {
+      startOverBtn.addEventListener("click", function () {
+        self.handleStartOver();
+      });
+    }
+
     var nextBtn = actions
       ? actions.querySelector(".msf-form__btn--primary")
       : null;
@@ -1670,6 +1765,7 @@
       if (question && fieldWrap && question.type !== "file") {
         var persistCurrentAnswer = function () {
           self.collectCurrent(question);
+          self.updateStartOverVisibility();
           self.scheduleSessionSave();
         };
 
@@ -1747,6 +1843,7 @@
     }
 
     panel.style.setProperty("--msf-transition-ms", transitionMs + "ms");
+    this.updateStartOverVisibility();
 
     var focusQuestion = null;
 
@@ -2650,6 +2747,10 @@
         }
 
         self.clearSession();
+
+        if (self.progressHeader) {
+          self.progressHeader.hidden = true;
+        }
 
         if (self.progressWrap) {
           self.progressWrap.style.display = "none";

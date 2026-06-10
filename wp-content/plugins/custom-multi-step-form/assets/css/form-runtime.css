@@ -54,6 +54,38 @@
     margin-bottom: 1.1rem;
 }
 
+.msf-form__step-footer {
+    margin-top: 0.85rem;
+}
+
+.msf-form__session-reset {
+    display: flex;
+    justify-content: flex-start;
+    margin: 0;
+}
+
+.msf-form__start-over {
+    appearance: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: none;
+    font: inherit;
+    font-size: var(--msf-text-sm);
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--msf-color-text-muted);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+}
+
+.msf-form__start-over:hover,
+.msf-form__start-over:focus-visible {
+    color: var(--msf-color-primary);
+    outline: none;
+}
+
 .msf-form__progress-meta {
     display: flex;
     align-items: flex-end;
