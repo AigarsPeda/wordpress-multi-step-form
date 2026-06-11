@@ -51,7 +51,5 @@ Optional custom output path:
 
 ## Docs
 
-- [PLAN.md](PLAN.md) — product and technical plan
-- [HANDOFF.md](HANDOFF.md) — current state for agents / handoff
 - [docs/msf-calculator-screenshots/](docs/msf-calculator-screenshots/README.md) — calculator form UI & admin screenshots
 - [docs/msf-calculator-theme/](docs/msf-calculator-theme/README.md) — backup Custom CSS + Page layout CSS for `#msf-form-3247`
